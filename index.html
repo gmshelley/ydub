@@ -39,6 +39,14 @@
   header{display:flex;align-items:center;gap:12px;padding-block:16px 12px}
   .mark{display:flex;align-items:center;gap:11px;flex:1;min-width:0}
   .logo{width:42px;height:42px;border-radius:50%;flex:none;background:#000}
+  #splash{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;transition:opacity .5s ease}
+  #splash.hide{opacity:0;pointer-events:none}
+  #splash .box{display:flex;flex-direction:column;align-items:center;gap:18px}
+  .splashlogo{width:min(60vw,250px);height:auto;border-radius:50%;background:#000;animation:pop .75s cubic-bezier(.2,.8,.25,1.3) both}
+  #splash .sload{font-family:var(--brand);text-transform:uppercase;letter-spacing:.26em;font-size:12px;color:var(--muted);animation:sfade .9s .5s both}
+  @keyframes pop{0%{opacity:0;transform:scale(.5)}55%{opacity:1}100%{opacity:1;transform:scale(1)}}
+  @keyframes sfade{from{opacity:0}to{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.splashlogo{animation:sfade .4s both}}
   .wordmark{font-family:var(--brand);font-weight:700;font-size:30px;letter-spacing:.01em;line-height:.86;text-transform:uppercase}
   .wordmark b{color:var(--accent)}
   .tag{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:3px}
@@ -164,6 +172,7 @@
 </style>
 </head>
 <body>
+<div id="splash"><div class="box"><img class="splashlogo" src="ydubfflogo.png" alt="Y-Dub Fantasy Football" onerror="this.style.display='none'"><div class="sload">Loading…</div></div></div>
 <div class="wrap">
   <header>
     <div class="mark">
@@ -401,7 +410,10 @@
   tb.onclick=()=>{ const dark=root.getAttribute("data-theme")==="dark"||(!root.getAttribute("data-theme")&&matchMedia("(prefers-color-scheme: dark)").matches);
     const n=dark?"light":"dark"; applyTheme(n); try{localStorage.setItem("ydub-theme",n);}catch(e){} };
 
-  loadAll();
+  function dismissSplash(){ const s=$("#splash"); if(!s) return; s.classList.add("hide"); setTimeout(()=>s.remove(),540); }
+  const splashStart=Date.now();
+  loadAll().finally(()=>setTimeout(dismissSplash, Math.max(0, 1600-(Date.now()-splashStart))));
+  setTimeout(dismissSplash, 6000); // safety
   setInterval(()=>{ if($("#detail").hidden) loadAll(); }, 90000);
 </script>
 </body>
