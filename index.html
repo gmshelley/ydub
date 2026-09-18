@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Y-Dub Fantasy Football</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#EEF2F6; --surface:#FFFFFF; --surface-2:#E6ECF2; --ink:#132029;
+    --muted:#5A6672; --line:#DBE2E9; --line-strong:#C6D0D9;
+    --accent:#1E47A0; --on-accent:#F2F7FF; --accent-ink:#173A73; --accent-bg:#D6E6F7;
+    --win:#1B7F43; --loss:#B23A2C; --live:#D64545;
+    --shadow:0 1px 2px rgba(15,30,45,.05), 0 6px 18px rgba(15,30,45,.07);
+    --brand:'Barlow Condensed','Arial Narrow',sans-serif; --body:'Barlow',system-ui,-apple-system,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+    --bg:#0C1116; --surface:#141B22; --surface-2:#1E2731; --ink:#EAF0F6;
+    --muted:#93A2B0; --line:#26313C; --line-strong:#37444F;
+    --accent:#5AA9E6; --on-accent:#08243B; --accent-ink:#BFE0F7; --accent-bg:#123049;
+    --win:#43C27E; --loss:#E5695B; --live:#FF5A54;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 8px 22px rgba(0,0,0,.4);
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0C1116; --surface:#141B22; --surface-2:#1E2731; --ink:#EAF0F6;
+    --muted:#93A2B0; --line:#26313C; --line-strong:#37444F;
+    --accent:#5AA9E6; --on-accent:#08243B; --accent-ink:#BFE0F7; --accent-bg:#123049;
+    --win:#43C27E; --loss:#E5695B; --live:#FF5A54;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 8px 22px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.4;-webkit-font-smoothing:antialiased}
+  img{max-width:100%} button{font-family:inherit}
+  .wrap{max-width:680px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+
+  header{display:flex;align-items:center;gap:12px;padding-block:18px 12px}
+  .mark{display:flex;align-items:center;gap:11px;flex:1;min-width:0}
+  .mark .ball{width:30px;height:30px;flex:none}
+  .wordmark{font-family:var(--brand);font-weight:700;font-size:30px;letter-spacing:.01em;line-height:.86;text-transform:uppercase}
+  .wordmark b{color:var(--accent)}
+  .tag{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:3px}
+  .theme-btn{flex:none;width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:17px;cursor:pointer;display:grid;place-items:center}
+
+  .updated{display:flex;align-items:center;justify-content:center;gap:8px;font-size:11.5px;color:var(--muted);margin-bottom:6px}
+  .updated button{background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;font-size:12px}
+  .updated .rdot{width:7px;height:7px;border-radius:50%;background:var(--win)}
+
+  .seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+  .seg.leagues{margin-bottom:10px}
+  .seg button{flex:1;border:0;background:transparent;color:var(--muted);cursor:pointer;font-weight:600;font-size:14px;padding:9px 8px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .seg button .swatch{width:9px;height:9px;border-radius:50%;flex:none}
+  .seg button[aria-selected="true"]{background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow)}
+  .seg.view{margin-top:14px}
+  .seg.view button{font-family:var(--brand);text-transform:uppercase;letter-spacing:.05em;font-size:16px}
+
+  .wkline{text-align:center;font-family:var(--brand);text-transform:uppercase;font-weight:700;font-size:19px;letter-spacing:.03em;margin:16px 0 2px}
+  .state{display:inline-flex;align-items:center;gap:5px;font-size:11px;letter-spacing:.12em;padding:2px 8px;border-radius:20px;vertical-align:middle;margin-left:8px;font-weight:700}
+  .state.live{background:color-mix(in srgb,var(--live) 16%,transparent);color:var(--live)}
+  .state.final{background:var(--surface-2);color:var(--muted)}
+  .livedot{width:7px;height:7px;border-radius:50%;background:var(--live);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @media (prefers-reduced-motion:reduce){.livedot{animation:none}}
+
+  .badge{border-radius:9px;flex:none;position:relative;display:inline-grid;place-items:center;overflow:hidden;color:#fff;font-family:var(--brand);font-weight:700;background:var(--tc,#456)}
+  .badge img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .badge .mono{font-size:.42em}
+
+  .matchups{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+  .mcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+  .team{display:flex;align-items:center;gap:11px;padding:12px 14px}
+  .team .who{flex:1;min-width:0}
+  .team .name{font-family:var(--brand);font-weight:600;font-size:19px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .team .owner{font-size:12.5px;color:var(--muted);margin-top:1px}
+  .team .score{font-family:var(--brand);font-weight:700;font-size:27px;line-height:1;font-variant-numeric:tabular-nums;min-width:56px;text-align:right}
+  .team .proj{display:block;font-size:11px;color:var(--muted);text-align:right;margin-top:3px}
+  .team.trail{opacity:.68}
+  .mid{display:flex;align-items:center;gap:10px;padding:2px 14px}
+  .mid .wp{flex:1;height:6px;border-radius:5px;overflow:hidden;display:flex;background:var(--surface-2);border:1px solid var(--line)}
+  .mid .vs{font-family:var(--brand);font-size:12px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .mid .pct{font-size:10.5px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;min-width:30px;text-align:center}
+
+  .board{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;margin-top:16px}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-family:var(--brand);text-transform:uppercase;letter-spacing:.08em;font-weight:600;font-size:12px;color:var(--muted);text-align:right;padding:11px 10px 9px;background:var(--surface-2)}
+  thead th.lft{text-align:left;padding-left:15px}
+  tbody td{padding:10px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;text-align:right;font-size:15px;font-weight:600}
+  tbody td.tm{text-align:left;padding-left:14px}
+  .tmcell{display:flex;align-items:center;gap:10px}
+  tbody tr:first-child td{border-top:0}
+  .rank{font-family:var(--brand);font-weight:700;font-size:16px;color:var(--muted);width:20px;text-align:center}
+  .tm .nm{font-family:var(--brand);font-weight:600;font-size:17px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tm .ow{font-size:11.5px;color:var(--muted);font-weight:500}
+  td .pf{color:var(--muted);font-weight:600}
+  .strk{display:inline-block;min-width:30px;padding:2px 7px;border-radius:20px;font-size:12px;font-weight:700;font-family:var(--brand)}
+  .strk.w{color:var(--win);background:color-mix(in srgb,var(--win) 14%,transparent)}
+  .strk.l{color:var(--loss);background:color-mix(in srgb,var(--loss) 14%,transparent)}
+  .cutlabel td{padding:6px 15px;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:700;background:var(--surface-2)}
+  tr.cut td{border-top:2px dashed var(--line-strong)}
+  caption{caption-side:top;text-align:left;padding:13px 15px 4px;font-family:var(--brand);text-transform:uppercase;letter-spacing:.05em;font-weight:700;font-size:15px;color:var(--muted)}
+
+  .prlist{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+  .prrow{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:10px 13px}
+  .prrow .pr{font-family:var(--brand);font-weight:700;font-size:22px;width:26px;text-align:center;color:var(--accent);font-variant-numeric:tabular-nums}
+  .prrow .who{flex:1;min-width:0}
+  .prrow .nm{font-family:var(--brand);font-weight:600;font-size:18px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prrow .sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lgtag{display:inline-block;padding:1px 6px;border-radius:5px;font-size:10px;font-weight:700;color:#fff;background:var(--accent)}
+  .prrow .met{text-align:right;font-variant-numeric:tabular-nums}
+  .prrow .met .r{font-family:var(--brand);font-weight:700;font-size:17px}
+  .prrow .met .p{font-size:11px;color:var(--muted)}
+
+  .note{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:22px 18px;text-align:center;margin-top:16px}
+  .note h3{font-family:var(--brand);text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px;font-size:19px}
+  .note p{color:var(--muted);font-size:14px;margin:0 0 14px;line-height:1.5}
+  .note a.btn{display:inline-block;background:var(--accent);color:var(--on-accent);text-decoration:none;font-weight:700;padding:11px 18px;border-radius:11px}
+  .center{text-align:center;color:var(--muted);padding:40px 0;font-size:15px}
+  .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:22px;line-height:1.6}
+  .foot b{color:var(--accent)}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark">
+      <svg class="ball" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="11" ry="7" transform="rotate(-45 12 12)" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M8 16 L16 8 M9.5 13.5l1.6 1.6M11 12l1.6 1.6M12.5 10.5l1.6 1.6" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <div><span class="wordmark">Y-<b>Dub</b></span><span class="tag">Fantasy Football</span></div>
+    </div>
+    <button class="theme-btn" id="themeBtn" aria-label="Switch light / dark">🌙</button>
+  </header>
+
+  <div class="updated" id="updated"></div>
+  <div class="seg leagues" role="tablist" id="leagueSeg"></div>
+  <div class="seg view" role="tablist" id="viewSeg">
+    <button role="tab" data-view="matchups" aria-selected="true">Matchups</button>
+    <button role="tab" data-view="standings" aria-selected="false">Standings</button>
+    <button role="tab" data-view="power" aria-selected="false">⚡ Power</button>
+  </div>
+
+  <div id="content"><div class="center">Loading your leagues…</div></div>
+
+  <p class="foot"><b>No ads. No junk.</b> Just your two leagues — live from Yahoo.</p>
+</div>
+
+<script>
+  const FN = "https://tsiaqvgcqziuzqfvjrun.supabase.co/functions/v1/ydub";
+  const PAL = ["#C8443B","#243B6B","#1F8A80","#C89B2E","#6B4E9E","#2E8B4F","#D57A2B","#5A6B78","#C65D8E","#2E6FC8","#79A63D","#8A3245"];
+  const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const $ = s => document.querySelector(s);
+
+  // ---- Yahoo parsers (validated against real data) ----
+  const frag = list => { const o={}; for(const f of list){ if(f && typeof f==="object") Object.assign(o,f);} return o; };
+  const ownerOf = i => i.managers?.[0]?.manager?.nickname || "";
+  const logoOf  = i => { const u=i.team_logos?.[0]?.team_logo?.url||""; return /blendr|s192sq\/fantasy-log/.test(u)&&/1\.png|default/.test(u)?"":u; };
+  const colorOf = id => PAL[(parseInt(id,10)||0) % PAL.length];
+
+  function parseStandings(js){
+    const lg = js?.fantasy_content?.league; if(!lg) return null;
+    const meta = lg[0], teamsObj = lg[1]?.standings?.[0]?.teams || {}, teams=[];
+    for(const k in teamsObj){ if(k==="count") continue;
+      const t = teamsObj[k].team, info = frag(t[0]); let st={};
+      for(const part of t.slice(1)){ if(part?.team_standings) st=part.team_standings; }
+      const ot = st.outcome_totals || {};
+      teams.push({ id:info.team_id, name:info.name, owner:ownerOf(info), logo:logoOf(info), color:colorOf(info.team_id),
+        rank:+(st.rank||0), wins:+(ot.wins||0), losses:+(ot.losses||0), ties:+(ot.ties||0),
+        pf:+(st.points_for||0), pa:+(st.points_against||0),
+        streak: st.streak ? (st.streak.type==="win"?"W":"L")+st.streak.value : "" });
+    }
+    teams.sort((a,b)=>a.rank-b.rank);
+    return { key:meta.league_key, name:meta.name, season:meta.season, week:+(meta.current_week||0), teams };
+  }
+  function parseScoreboard(js){
+    const lg = js?.fantasy_content?.league; if(!lg) return [];
+    const mk = lg[1]?.scoreboard?.["0"]?.matchups || {}, out=[];
+    for(const k in mk){ if(k==="count") continue;
+      const m = mk[k].matchup, tObj = m["0"]?.teams || {}, sides=[];
+      for(const tk in tObj){ if(tk==="count") continue;
+        const t=tObj[tk].team, info=frag(t[0]), p=t[1]||{};
+        sides.push({ id:info.team_id, name:info.name, owner:ownerOf(info), logo:logoOf(info), color:colorOf(info.team_id),
+          score:+(p.team_points?.total||0), proj:+(p.team_projected_points?.total||0),
+          winprob: p.win_probability!=null ? Math.round(p.win_probability*100) : null });
+      }
+      out.push({ status:m.status, a:sides[0], b:sides[1] });
+    }
+    return out;
+  }
+  const mono = n => { const w=String(n||"").replace(/[^A-Za-z ]/g," ").split(/\s+/).filter(Boolean); return ((w[0]?.[0]||"")+(w[1]?.[0]||"")).toUpperCase()||"?"; };
+  const badge = (t,px) => `<span class="badge" style="width:${px}px;height:${px}px;--tc:${t.color}"><span class="mono">${esc(mono(t.name))}</span>${t.logo?`<img src="${esc(t.logo)}" alt="" loading="lazy" onerror="this.remove()">`:""}</span>`;
+
+  // ---- State + load ----
+  let leagues=[], li=0, view="matchups";
+  async function getJSON(u){ const r=await fetch(u,{cache:"no-store"}); return r.json(); }
+  async function loadLeague(who){
+    try{
+      const [st,sc]=await Promise.all([getJSON(`${FN}/raw?who=${who}&kind=standings`),getJSON(`${FN}/raw?who=${who}&kind=scoreboard`)]);
+      if(!st?.fantasy_content) return { id:who, connected:false };
+      const s=parseStandings(st); return { id:who, connected:true, ...s, matchups:parseScoreboard(sc) };
+    }catch(e){ return { id:who, connected:false, err:String(e) }; }
+  }
+  async function loadAll(){
+    leagues = await Promise.all([loadLeague("A"), loadLeague("B")]);
+    if(!leagues[li] || (!leagues[li].connected && leagues.some(l=>l.connected))) li = leagues.findIndex(l=>l.connected);
+    if(li<0) li=0;
+    renderLeagueTabs(); render();
+    const t=new Date();
+    $("#updated").innerHTML = `<span class="rdot"></span>Updated ${t.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})} · <button id="refreshBtn">Refresh</button>`;
+    $("#refreshBtn").onclick=()=>{ $("#updated").innerHTML="Refreshing…"; loadAll(); };
+  }
+
+  function renderLeagueTabs(){
+    const seg=$("#leagueSeg"); seg.innerHTML="";
+    leagues.forEach((L,i)=>{
+      const b=document.createElement("button"); b.setAttribute("role","tab"); b.setAttribute("aria-selected",i===li);
+      const label = L.connected ? L.name : (i===1?"League B":"League A");
+      b.innerHTML = `<span class="swatch" style="background:${L.connected?'var(--accent)':'var(--muted)'}"></span>${esc(label)}`;
+      b.onclick=()=>{ li=i; [...seg.children].forEach((x,j)=>x.setAttribute("aria-selected",j===li)); render(); };
+      seg.appendChild(b);
+    });
+  }
+
+  $("#viewSeg").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return;
+    view=b.dataset.view; [...$("#viewSeg").children].forEach(x=>x.setAttribute("aria-selected",x===b)); render(); });
+
+  function render(){
+    const L=leagues[li], c=$("#content");
+    if(!L){ c.innerHTML=`<div class="center">No leagues loaded.</div>`; return; }
+    if(!L.connected){
+      const who = L.id;
+      c.innerHTML=`<div class="note"><h3>${who==="B"?"League B isn’t connected yet":"Not connected"}</h3>
+        <p>${who==="B"?"Have a buddy who’s in that league tap the button below and hit <b>Allow</b> — one time only.":"This league needs to be connected once."}</p>
+        <a class="btn" href="${FN}/login?who=${who}">Connect ${who==="B"?"League B":"League A"}</a></div>`;
+      return;
+    }
+    if(view==="matchups") c.innerHTML = renderMatchups(L);
+    else if(view==="standings") c.innerHTML = renderStandings(L);
+    else c.innerHTML = renderPower();
+  }
+
+  function statusTag(s){
+    if(s==="postevent") return `<span class="state final">FINAL</span>`;
+    if(s==="preevent") return `<span class="state final">UPCOMING</span>`;
+    return `<span class="state live"><span class="livedot"></span>LIVE</span>`;
+  }
+  function renderMatchups(L){
+    if(!L.matchups.length) return `<div class="wkline">Week ${L.week}</div><div class="center">No matchups posted yet.</div>`;
+    let anyLive = L.matchups.some(m=>m.status==="midevent");
+    let h=`<div class="wkline">Week ${L.week} ${anyLive?statusTag("midevent"):(L.matchups[0].status==="postevent"?statusTag("postevent"):"")}</div><div class="matchups">`;
+    for(const m of L.matchups){
+      const aLead=m.a.score>=m.b.score;
+      const row=(t,lead)=>`<div class="team ${lead?'':'trail'}">${badge(t,38)}
+        <div class="who"><div class="name">${esc(t.name)}</div><div class="owner">${esc(t.owner)}</div></div>
+        <div><div class="score">${t.score.toFixed(1)}</div><span class="proj">proj ${t.proj.toFixed(0)}</span></div></div>`;
+      const pa=m.a.winprob, pb=m.b.winprob;
+      const wpbar = (pa!=null&&pb!=null) ? `<span class="pct">${pa}%</span><span class="wp"><i style="width:${pa}%;background:var(--accent)"></i><i style="width:${pb}%;background:var(--line-strong)"></i></span><span class="pct">${pb}%</span>` : `<span class="vs">vs</span>`;
+      h+=`<div class="mcard">${row(m.a,aLead)}<div class="mid">${wpbar}</div>${row(m.b,!aLead)}</div>`;
+    }
+    return h+`</div>`;
+  }
+  function renderStandings(L){
+    let rows="";
+    L.teams.forEach((t,i)=>{
+      const sc=t.streak?.[0]==="W"?"w":"l";
+      rows+=`<tr class="${i===6?'cut':''}"><td class="rank">${t.rank||i+1}</td>
+        <td class="tm"><div class="tmcell">${badge(t,28)}<span><span class="nm">${esc(t.name)}</span><br><span class="ow">${esc(t.owner)}</span></span></div></td>
+        <td>${t.wins}-${t.losses}${t.ties?'-'+t.ties:''}</td><td class="pf">${t.pf.toFixed(1)}</td>
+        <td>${t.streak?`<span class="strk ${sc}">${esc(t.streak)}</span>`:'—'}</td></tr>`;
+      if(i===5) rows+=`<tr class="cutlabel"><td colspan="5">Playoff line</td></tr>`;
+    });
+    return `<div class="board"><table><caption>${esc(L.name)} · Standings</caption>
+      <thead><tr><th></th><th class="lft">Team</th><th>Rec</th><th>PF</th><th>Strk</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  function renderPower(){
+    const all=[];
+    leagues.forEach(L=>{ if(!L.connected) return; L.teams.forEach(t=>all.push({L,t,score:(t.wins-t.losses)*40+t.pf})); });
+    if(!all.length) return `<div class="center">Connect a league to see power rankings.</div>`;
+    all.sort((a,b)=>b.score-a.score);
+    let h=`<div class="wkline">⚡ Power Rankings</div><div class="prlist">`;
+    all.forEach((o,i)=>{ const t=o.t;
+      h+=`<div class="prrow"><span class="pr">${i+1}</span>${badge(t,36)}
+        <div class="who"><div class="nm">${esc(t.name)}</div><div class="sub"><span class="lgtag">${esc(o.L.name)}</span> · ${esc(t.owner)}</div></div>
+        <div class="met"><div class="r">${t.wins}-${t.losses}</div><div class="p">${t.pf.toFixed(1)} PF</div></div></div>`;
+    });
+    return h+`</div>`;
+  }
+
+  // theme
+  const root=document.documentElement, tb=$("#themeBtn");
+  function applyTheme(t){ if(t)root.setAttribute("data-theme",t); else root.removeAttribute("data-theme");
+    const dark=t==="dark"||(!t&&matchMedia("(prefers-color-scheme: dark)").matches); tb.textContent=dark?"☀️":"🌙"; }
+  let saved=null; try{ saved=localStorage.getItem("ydub-theme"); }catch(e){}
+  applyTheme(saved);
+  tb.onclick=()=>{ const dark=root.getAttribute("data-theme")==="dark"||(!root.getAttribute("data-theme")&&matchMedia("(prefers-color-scheme: dark)").matches);
+    const n=dark?"light":"dark"; applyTheme(n); try{localStorage.setItem("ydub-theme",n);}catch(e){} };
+
+  loadAll();
+  setInterval(loadAll, 90000); // auto-refresh every 90s
+</script>
+</body>
+</html>
