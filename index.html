@@ -124,6 +124,28 @@
   tr.cut td{border-top:2px solid var(--ink)}
   .cutlabel td{padding:5px 14px;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:700;background:var(--surface-2)}
 
+  /* Standings rows + Pink Speedo Zone */
+  .strow{display:grid;grid-template-columns:24px 1fr 58px 62px 46px;align-items:center;gap:10px;padding:11px 12px 11px 36px;border-top:1px solid var(--line)}
+  .board > .strow:first-child{border-top:0}
+  .strow.sthead{font-family:var(--brand);text-transform:uppercase;letter-spacing:.06em;font-weight:600;font-size:12.5px;color:var(--muted);background:var(--surface-2);padding-block:9px}
+  .strow .c-rk{font-family:var(--brand);font-weight:700;font-size:18px;color:var(--muted);text-align:center}
+  .strow.sthead .c-rk,.strow.sthead .c-rc,.strow.sthead .c-pf,.strow.sthead .c-sk{font-size:12.5px;font-weight:600}
+  .strow .c-rc,.strow .c-pf,.strow .c-sk{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;font-size:16px}
+  .strow .c-pf{color:var(--muted)}
+  .strow .tmcell{display:flex;align-items:center;gap:11px;min-width:0}
+  .strow .tmtxt{min-width:0;display:flex;flex-direction:column;line-height:1.15}
+  .strow .nm{font-family:var(--brand);font-weight:600;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .strow .ow{font-size:14px;color:var(--muted);font-weight:500}
+  .spd{display:inline-block;width:17px;height:15px;vertical-align:-2px;margin-left:4px}
+  .spdnote .spd{vertical-align:-3px;margin:0 2px 0 0;width:18px;height:16px}
+  .strow.danger{background:color-mix(in srgb,#EC4899 8%,var(--surface))}
+  .strow.cutline{border-top:2px solid var(--ink)}
+  .speedozone{position:relative}
+  .speedorail{position:absolute;left:5px;top:5px;bottom:5px;width:25px;background:#EC4899;border-radius:6px;display:grid;place-items:center;pointer-events:none}
+  .speedorail span{writing-mode:vertical-rl;color:#fff;font-family:var(--brand);font-weight:700;font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;white-space:nowrap}
+  .spdnote{font-size:13px;color:var(--muted);line-height:1.55;margin:12px 4px 0;text-align:center}
+  .spdnote b{color:var(--ink)}
+
   /* Power */
   .prlist{display:flex;flex-direction:column}
   .prrow{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-top:0;padding:12px 13px}
@@ -220,14 +242,16 @@
 
   <div id="detail" hidden></div>
 
-  <p class="foot"><b>No ads. No junk.</b> Just your two leagues — live from Yahoo.</p>
+  <p class="foot"><b>Y-Dub Fantasy Football</b> — Ygnacio Wood NFC &amp; AFC, side by side all season.</p>
 </div>
 
 <script>
   const FN = "https://tsiaqvgcqziuzqfvjrun.supabase.co/functions/v1/ydub";
+  const LK = { A:"nfl.l.875179", B:"nfl.l.1384656" };
   const PAL = ["#C0392E","#243B6B","#1F8A80","#B8860B","#6B4E9E","#2E8B4F","#D57A2B","#5A6B78","#B84A7E","#2E6FC8","#6E9A2E","#8A3245"];
   const POSC = {QB:"var(--qb)",RB:"var(--rb)",WR:"var(--wr)",TE:"var(--te)",K:"var(--k)","DEF":"var(--def)"};
   const LGC = { A:{tag:"var(--nfc)",dot:"var(--nfc)"}, B:{tag:"var(--afc)",dot:"var(--afc-bright)"} }; // NFC royal / AFC sky
+  const SPEEDO = '<svg class="spd" viewBox="0 0 24 22" aria-hidden="true"><path d="M2.4 5.1Q12 2.7 21.6 5.1L20.4 9.7Q14.7 8.4 13.4 12.7 12.7 15 12 15 11.3 15 10.6 12.7 9.3 8.4 3.6 9.7Z" fill="#EC4899" stroke="#A81F60" stroke-width=".8" stroke-linejoin="round"/></svg>';
   const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const $ = s => document.querySelector(s);
   const frag = list => { const o={}; for(const f of list){ if(f && typeof f==="object" && !Array.isArray(f)) Object.assign(o,f);} return o; };
@@ -267,6 +291,8 @@
     }
     return out;
   }
+  function parseSettings(js){ const lg=js?.fantasy_content?.league; const s=lg?.[1]?.settings?.[0]||{};
+    return { playoffTeams:+(s.num_playoff_teams||6), playoffStart:+(s.playoff_start_week||15) }; }
   function parseRoster(js){
     const team = js?.fantasy_content?.team; if(!team) return null;
     let rosterPart=null; for(const part of team){ if(part && part.roster) rosterPart=part.roster; }
@@ -291,9 +317,14 @@
   async function getJSON(u){ const r=await fetch(u,{cache:"no-store"}); return r.json(); }
   async function loadLeague(who){
     try{
-      const [st,sc]=await Promise.all([getJSON(`${FN}/raw?who=${who}&kind=standings`),getJSON(`${FN}/raw?who=${who}&kind=scoreboard`)]);
+      const [st,sc,set]=await Promise.all([
+        getJSON(`${FN}/raw?who=${who}&kind=standings`),
+        getJSON(`${FN}/raw?who=${who}&kind=scoreboard`),
+        getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`league/${LK[who]}/settings`)).catch(()=>({})) ]);
       if(!st?.fantasy_content) return { id:who, connected:false };
-      const s=parseStandings(st); return { id:who, connected:true, ...s, matchups:parseScoreboard(sc) };
+      const s=parseStandings(st), cfg=parseSettings(set), regWeeks=(cfg.playoffStart||15)-1;
+      s.teams.forEach(t=>{ const safe=s.teams.some(o=>o!==t && (o.wins+(regWeeks-(o.wins+o.losses+o.ties)))<t.wins); t.speedo=!safe; });
+      return { id:who, connected:true, ...s, playoffTeams:cfg.playoffTeams||6, regWeeks, matchups:parseScoreboard(sc) };
     }catch(e){ return { id:who, connected:false }; }
   }
   async function loadAll(){
@@ -350,16 +381,23 @@
     return h+`</div>`;
   }
   function renderStandings(L){
-    let rows="";
-    L.teams.forEach((t,i)=>{ const sc=t.streak?.[0]==="W"?"w":"l";
-      rows+=`<tr class="${i===6?'cut':''}"><td class="rank">${t.rank||i+1}</td>
-        <td class="tm"><div class="tmcell">${badge(t,30)}<span><span class="nm">${esc(t.name)}</span><br><span class="ow">${esc(t.owner)}</span></span></div></td>
-        <td>${t.wins}-${t.losses}${t.ties?'-'+t.ties:''}</td><td class="pf">${t.pf.toFixed(1)}</td>
-        <td>${t.streak?`<span class="strk ${sc}">${esc(t.streak)}</span>`:'—'}</td></tr>`;
-      if(i===5) rows+=`<tr class="cutlabel"><td colspan="5">Playoff line</td></tr>`;
-    });
-    return `<div class="sec"><h2>${esc(L.name)}</h2></div><div class="board"><table>
-      <thead><tr><th></th><th class="lft">Team</th><th>Rec</th><th>PF</th><th>Strk</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    const line=L.playoffTeams||6;
+    const firstRisk=L.teams.findIndex(t=>t.speedo);
+    const head=`<div class="strow sthead"><span class="c-rk">#</span><span class="c-tm">Team</span><span class="c-rc">Rec</span><span class="c-pf">PF</span><span class="c-sk">Strk</span></div>`;
+    const rowHTML=(t,i)=>{ const sc=t.streak?.[0]==="W"?"w":"l"; const cut=(i===line)?" cutline":"";
+      return `<div class="strow${t.speedo?" danger":""}${cut}">
+        <span class="c-rk">${t.rank||i+1}</span>
+        <span class="c-tm"><div class="tmcell">${badge(t,30)}<span class="tmtxt"><span class="nm">${esc(t.name)}${t.speedo?SPEEDO:""}</span><span class="ow">${esc(t.owner)}</span></span></div></span>
+        <span class="c-rc">${t.wins}-${t.losses}${t.ties?"-"+t.ties:""}</span>
+        <span class="c-pf">${t.pf.toFixed(1)}</span>
+        <span class="c-sk">${t.streak?`<b class="strk ${sc}">${esc(t.streak)}</b>`:"—"}</span></div>`; };
+    let safeRows="", zoneRows="";
+    L.teams.forEach((t,i)=>{ if(firstRisk>=0 && i>=firstRisk) zoneRows+=rowHTML(t,i); else safeRows+=rowHTML(t,i); });
+    const zone = zoneRows ? `<div class="speedozone"><div class="speedorail"><span>Pink Speedo Zone</span></div>${zoneRows}</div>` : "";
+    const note = firstRisk>=0
+      ? `<p class="spdnote">${SPEEDO} <b>Pink Speedo watch.</b> Every team marked can still finish dead last — the icon drops the moment they’re mathematically safe. Last place in each league wears it.</p>`
+      : `<p class="spdnote">${SPEEDO} Last place is locked in — the Pink Speedo has an owner.</p>`;
+    return `<div class="sec"><h2>${esc(L.name)}</h2></div><div class="board">${head}${safeRows}${zone}</div>${note}`;
   }
   function renderPower(){
     const all=[]; leagues.forEach(L=>{ if(!L.connected) return; L.teams.forEach(t=>all.push({L,t,score:(t.wins-t.losses)*40+t.pf})); });
