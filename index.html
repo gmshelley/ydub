@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Rubik:wght@400;500;600;700&display=swap">
 <style>
   :root{
     --bg:#ECEFF3; --surface:#FFFFFF; --surface-2:#E9EDF1; --ink:#141B23;
@@ -23,7 +23,7 @@
     --win:#1C7C42; --loss:#B23A2C; --live:#D64545;
     --nfc:#1E47A0; --afc:#2C82C9; --afc-bright:#5AA9E6;
     --qb:#C0392E; --rb:#2E8B4F; --wr:#2E6FC8; --te:#D57A2B; --k:#6B4E9E; --def:#5A6B78;
-    --brand:'Barlow Condensed','Arial Narrow',sans-serif; --body:'Barlow',system-ui,-apple-system,sans-serif;
+    --brand:'Rajdhani',sans-serif; --body:'Rubik',system-ui,-apple-system,sans-serif;
   }
   @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
     --bg:#0B1015; --surface:#131A21; --surface-2:#1B242D; --ink:#EAF0F6;
@@ -46,7 +46,7 @@
 
   /* Header */
   header{display:flex;align-items:center;gap:12px;padding-block:16px 14px;border-bottom:2px solid var(--ink);margin-bottom:2px}
-  .mark{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
+  .mark{display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer}
   .logo{width:46px;height:46px;border-radius:50%;flex:none;background:#000}
   .wordmark{font-family:var(--brand);font-weight:700;font-size:32px;letter-spacing:.005em;line-height:.84;text-transform:uppercase}
   .wordmark b{color:var(--accent)}
@@ -226,6 +226,15 @@
   .pc-h{font-family:var(--brand);text-transform:uppercase;letter-spacing:.08em;font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:6px}
   .pc-line{font-size:15.5px;color:var(--ink);line-height:1.45}
   .pc-team{display:flex;align-items:center;gap:10px;font-family:var(--brand);font-weight:600;font-size:18px}
+  .strow.tap{cursor:pointer}
+  .strow.tap:hover{background:var(--surface-2)}
+  .tphead{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:15px;margin-top:2px}
+  .tphead .tpinfo{flex:1;min-width:0}
+  .tpname{font-family:var(--brand);font-weight:700;font-size:24px;line-height:1}
+  .tpown{font-size:13.5px;color:var(--muted);margin-top:4px}
+  .tpkv{display:flex;gap:18px;margin-top:11px;flex-wrap:wrap}
+  .tpkv span{display:flex;flex-direction:column;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+  .tpkv b{font-family:var(--brand);font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums;margin-bottom:2px}
   .pm .inj{color:var(--loss);font-weight:700}
   .pts{font-family:var(--brand);font-weight:700;font-size:18px;font-variant-numeric:tabular-nums;flex:none;color:var(--muted)}
   .prow.lead-a .pcell:first-child .pts,.prow.lead-b .pcell:last-child .pts{color:var(--ink)}
@@ -262,7 +271,7 @@
 <div id="splash"><div class="box"><img class="splashlogo" src="ydubfflogo.png" alt="Y-Dub Fantasy Football" onerror="this.style.display='none'"><div class="sload">Loading…</div></div></div>
 <div class="wrap">
   <header>
-    <div class="mark">
+    <div class="mark" id="homeLink" title="Home">
       <img class="logo" src="ydubfflogo.png" alt="Y-Dub" onerror="this.style.display='none'">
       <div><span class="wordmark">Y-<b>Dub</b></span><span class="tag">Fantasy Football</span></div>
     </div>
@@ -369,7 +378,7 @@
     return { starters, bench };
   }
 
-  let leagues=[], li=0, view="matchups", detMode="pts", curDetail=null;
+  let leagues=[], li=0, view="matchups", detMode="pts", curDetail=null, pmap={};
   async function getJSON(u){ const r=await fetch(u,{cache:"no-store"}); return r.json(); }
   async function loadLeague(who){
     try{
@@ -419,6 +428,7 @@
     else if(view==="standings") c.innerHTML = renderStandings(L);
     else c.innerHTML = renderPower();
     if(view==="matchups") c.querySelectorAll(".mcard").forEach(el=>el.onclick=()=>openMatchup(+el.dataset.mi));
+    if(view==="standings") c.querySelectorAll("[data-ti]").forEach(el=>el.onclick=()=>openTeam(li,el.dataset.ti));
   }
   const statusTag = s => s==="postevent"?`<span class="state final">FINAL</span>`:s==="preevent"?`<span class="state final">UPCOMING</span>`:`<span class="state live"><span class="livedot"></span>LIVE</span>`;
 
@@ -442,7 +452,7 @@
     const firstRisk=L.teams.findIndex(t=>t.speedo);
     const head=`<div class="strow sthead"><span class="c-rk">#</span><span class="c-tm">Team</span><span class="c-rc">Rec</span><span class="c-pf">PF</span><span class="c-sk">Strk</span></div>`;
     const rowHTML=(t,i)=>{ const sc=t.streak?.[0]==="W"?"w":"l"; const cut=(i===line)?" cutline":"";
-      return `<div class="strow${t.speedo?" danger":""}${cut}">
+      return `<div class="strow tap${t.speedo?" danger":""}${cut}" data-ti="${esc(t.id)}">
         <span class="c-rk">${t.rank||i+1}</span>
         <span class="c-tm"><div class="tmcell">${badge(t,30)}<span class="tmtxt"><span class="nm">${esc(t.name)}${t.speedo?SPEEDO:""}</span><span class="ow">${esc(t.owner)}</span></span></div></span>
         <span class="c-rc">${t.wins}-${t.losses}${t.ties?"-"+t.ties:""}</span>
@@ -525,9 +535,9 @@
        ${lineupHTML}`);
     $("#backBtn").onclick=hideDetail;
     $("#detail").querySelectorAll(".detmode button").forEach(b=>b.onclick=()=>{ detMode=b.dataset.dm; renderDetail(); });
-    curDetail.pmap={};
-    [...la.starters,...la.bench].forEach(p=>{ if(p.key) curDetail.pmap[p.key]={p,team:m.a}; });
-    [...lb.starters,...lb.bench].forEach(p=>{ if(p.key) curDetail.pmap[p.key]={p,team:m.b}; });
+    pmap={};
+    [...la.starters,...la.bench].forEach(p=>{ if(p.key) pmap[p.key]={p,team:m.a}; });
+    [...lb.starters,...lb.bench].forEach(p=>{ if(p.key) pmap[p.key]={p,team:m.b}; });
     $("#detail").querySelectorAll("[data-pk]").forEach(el=>{ if(el.dataset.pk) el.onclick=()=>openPlayer(el.dataset.pk); });
   }
 
@@ -535,20 +545,25 @@
   function showPCard(inner){ const el=$("#pcard"); el.innerHTML=`<div class="pc" id="pcInner">${inner}</div>`; el.hidden=false;
     el.onclick=(e)=>{ if(e.target===el) hidePCard(); }; document.body.style.overflow="hidden"; }
   function hidePCard(){ $("#pcard").hidden=true; $("#pcard").innerHTML=""; document.body.style.overflow=""; }
+  function playerParts(js){ const pl=js?.fantasy_content?.player; return Array.isArray(pl)?pl.slice(1):[]; }
+  const pstatsOf = js => { for(const part of playerParts(js)) if(part?.player_stats) return (part.player_stats.stats||[]).map(s=>({id:String(s.stat.stat_id),val:s.stat.value})).filter(x=>x.val&&x.val!=="0"&&x.val!==0&&x.val!=="0.00"); return []; };
+  const ppointsOf = js => { for(const part of playerParts(js)) if(part?.player_points!=null) return part.player_points.total; return null; };
+  const powndOf = js => { for(const part of playerParts(js)) if(part?.percent_owned!=null) return part.percent_owned.value; return null; };
+
   function openPlayer(pk){
-    const e=curDetail?.pmap?.[pk]; if(!e) return;
-    const p=e.p, ft=e.team, statMap=curDetail.statMap||{};
+    const e=pmap[pk]; if(!e) return;
+    const p=e.p, ft=e.team, statMap=leagues[li]?.statMap||{}, who=leagues[li]?.id||"A";
     const g=nflFor(p.team);
     let gameHTML;
-    if(!g){ gameHTML=`<div class="pg"><div class="pg-top">NFL Game</div><div class="pg-clock">No game found for ${esc(p.team||"—")}${p.status==="BYE"||!p.team?" (bye week)":""}</div></div>`; }
+    if(!g){ gameHTML=`<div class="pg"><div class="pg-top">NFL Game</div><div class="pg-clock">No game found${p.team?" for "+esc(p.team):""}</div></div>`; }
     else{
-      const vs = g.homeAway==="home" ? "vs" : "@";
-      const top = g.state==="in" ? `<span class="livedot"></span>LIVE` : g.state==="post" ? "FINAL" : "UPCOMING";
-      const scores = g.state==="pre" ? `${esc(p.team)} ${vs} ${esc(g.oppAbbr)}` : `${esc(p.team)} ${esc(g.score)} <span class="pg-vs">${vs}</span> ${esc(g.oppScore)} ${esc(g.oppAbbr)}`;
-      const clk = g.state==="pre" ? esc(g.detail) : g.state==="post" ? "Final" : `${esc(g.clock)} · Q${esc(g.period)}`;
+      const vs=g.homeAway==="home"?"vs":"@";
+      const top=g.state==="in"?`<span class="livedot"></span>LIVE`:g.state==="post"?"FINAL":"UPCOMING";
+      const scores=g.state==="pre"?`${esc(p.team)} ${vs} ${esc(g.oppAbbr)}`:`${esc(p.team)} ${esc(g.score)} <span class="pg-vs">${vs}</span> ${esc(g.oppScore)} ${esc(g.oppAbbr)}`;
+      const clk=g.state==="pre"?esc(g.detail):g.state==="post"?"Final":`${esc(g.clock)} · Q${esc(g.period)}`;
       gameHTML=`<div class="pg ${esc(g.state)}"><div class="pg-top">${top}</div><div class="pg-score">${scores}</div><div class="pg-clock">${clk}</div></div>`;
     }
-    const line = p.stats&&p.stats.length ? p.stats.map(s=>`${s.val} ${statMap[s.id]||""}`).join(" · ") : (p.pts>0?"—":"Yet to play");
+    const line=p.stats&&p.stats.length?p.stats.map(s=>`${s.val} ${statMap[s.id]||""}`).join(" · "):(p.pts>0?"—":"Yet to play");
     showPCard(
       `<button class="pc-close" id="pcClose" aria-label="Close">✕</button>
        <div class="pc-hero" style="--pc:${POSC[p.pos]||'#456'}">
@@ -559,8 +574,41 @@
        ${gameHTML}
        <div class="pc-pts"><div class="pc-big">${p.pts.toFixed(1)}</div><div class="pc-lbl">Fantasy Points · Week ${leagues[li].week}</div></div>
        <div class="pc-sec"><div class="pc-h">This week's stat line</div><div class="pc-line">${esc(line)}</div></div>
+       <div id="pcExtra"><div class="pc-sec"><div class="pc-h">Season</div><div class="pc-line" style="color:var(--muted)">Loading…</div></div></div>
        <div class="pc-sec"><div class="pc-h">Rostered by</div><div class="pc-team">${badge(ft,28)}<span>${esc(ft.name)} · ${esc(ft.owner)}</span></div></div>`);
     $("#pcClose").onclick=hidePCard;
+    if(p.key) (async()=>{
+      try{
+        const [ss,po]=await Promise.all([
+          getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`player/${p.key}/stats;type=season`)),
+          getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`player/${p.key}/percent_owned`)) ]);
+        const sstats=pstatsOf(ss), spts=ppointsOf(ss), own=powndOf(po);
+        const box=document.getElementById("pcExtra"); if(!box) return;
+        let h="";
+        if(sstats.length||spts!=null) h+=`<div class="pc-sec"><div class="pc-h">Season${spts!=null?` · ${(+spts).toFixed(1)} pts`:""}</div><div class="pc-line">${esc(sstats.map(s=>`${s.val} ${statMap[s.id]||""}`).join(" · ")||"—")}</div></div>`;
+        if(own!=null) h+=`<div class="pc-sec"><div class="pc-h">Ownership</div><div class="pc-line">${esc(own)}% rostered across Yahoo</div></div>`;
+        box.innerHTML=h;
+      }catch(e){ const box=document.getElementById("pcExtra"); if(box) box.innerHTML=""; }
+    })();
+  }
+
+  async function openTeam(lgi, ti){
+    const L=leagues[lgi]; const t=L?.teams.find(x=>String(x.id)===String(ti)); if(!t) return;
+    curDetail=null;
+    showDetail(`<button class="back" id="backBtn">‹ Back</button><div class="center"><span class="spin"></span>Loading ${esc(t.name)}…</div>`);
+    $("#backBtn").onclick=hideDetail;
+    let ros;
+    try{ const r=await getJSON(`${FN}/y?who=${L.id}&p=`+encodeURIComponent(`team/${L.key}.t.${ti}/roster;week=${L.week}/players/stats;type=week;week=${L.week}`)); ros=parseRoster(r); }catch(e){}
+    if(!ros){ showDetail(`<button class="back" id="bb">‹ Back</button><div class="center">Couldn’t load roster.</div>`); $("#bb").onclick=hideDetail; return; }
+    pmap={}; [...ros.starters,...ros.bench].forEach(p=>{ if(p.key) pmap[p.key]={p,team:t}; });
+    const prow=(p)=>`<div class="srow tap" data-pk="${esc(p.key||'')}"><span class="sslot">${esc(p.slot||"")}</span>${pav(p)}<div class="sinfo"><span class="pn">${esc(p.name||"—")}</span><span class="pstat2"><b class="spos" style="color:${POSC[p.pos]||'#456'}">${esc(p.pos)}</b> · ${esc(p.team||"—")}${p.status?` · <b style="color:var(--loss)">${esc(p.status)}</b>`:""}</span></div><span class="pts" style="color:var(--ink)">${p.pts.toFixed(1)}</span></div>`;
+    showDetail(
+      `<button class="back" id="backBtn">‹ Back to Standings</button>
+       <div class="tphead">${badge(t,54)}<div class="tpinfo"><div class="tpname">${esc(t.name)}</div><div class="tpown">${esc(t.owner)} · ${esc(L.name)}</div>
+         <div class="tpkv"><span><b>#${t.rank}</b>Rank</span><span><b>${t.wins}-${t.losses}${t.ties?'-'+t.ties:''}</b>Rec</span><span><b>${t.pf.toFixed(1)}</b>PF</span><span><b>${t.pa.toFixed(1)}</b>PA</span></div></div></div>
+       <div class="lineup"><div class="secrow">Starters · Week ${L.week}</div>${ros.starters.map(prow).join("")}<div class="secrow">Bench</div>${ros.bench.map(prow).join("")}</div>`);
+    $("#backBtn").onclick=hideDetail;
+    $("#detail").querySelectorAll("[data-pk]").forEach(el=>{ if(el.dataset.pk) el.onclick=()=>openPlayer(el.dataset.pk); });
   }
 
   const root=document.documentElement, tb=$("#themeBtn");
@@ -570,6 +618,9 @@
   applyTheme(saved);
   tb.onclick=()=>{ const dark=root.getAttribute("data-theme")==="dark"||(!root.getAttribute("data-theme")&&matchMedia("(prefers-color-scheme: dark)").matches);
     const n=dark?"light":"dark"; applyTheme(n); try{localStorage.setItem("ydub-theme",n);}catch(e){} };
+
+  $("#homeLink").onclick=()=>{ if(typeof hidePCard==="function") hidePCard(); $("#detail").hidden=true; $("#home").hidden=false;
+    view="matchups"; [...$("#viewSeg").children].forEach(x=>x.setAttribute("aria-selected",x.dataset.view==="matchups")); render(); window.scrollTo(0,0); };
 
   function dismissSplash(){ const s=$("#splash"); if(!s) return; s.classList.add("hide"); setTimeout(()=>s.remove(),540); }
   const splashStart=Date.now();
