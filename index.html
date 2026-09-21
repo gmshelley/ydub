@@ -288,18 +288,19 @@
   .foot b{color:var(--ink)}
 
   /* Splash */
-  #splash{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;transition:opacity .5s ease}
+  #splash{position:fixed;inset:0;z-index:200;background:#000;display:grid;place-items:center;transition:opacity .5s ease}
   #splash.hide{opacity:0;pointer-events:none}
-  #splash .box{display:flex;flex-direction:column;align-items:center;gap:20px}
-  .splashlogo{width:min(60vw,250px);height:auto;border-radius:50%;background:#000;animation:pop .75s cubic-bezier(.2,.8,.25,1.3) both}
-  #splash .sload{font-family:var(--brand);text-transform:uppercase;letter-spacing:.28em;font-size:12.5px;color:var(--muted);animation:sfade .9s .5s both}
+  #splash .box{display:flex;flex-direction:column;align-items:center;gap:22px}
+  .splashlogo{width:min(62vw,260px);height:auto;border-radius:50%;background:#000;opacity:0}
+  .splashlogo.in{animation:pop .7s cubic-bezier(.2,.8,.25,1.3) both}
+  #splash .sload{font-family:var(--brand);text-transform:uppercase;letter-spacing:.28em;font-size:12.5px;color:#8a94a0;animation:sfade .9s .4s both}
   @keyframes pop{0%{opacity:0;transform:scale(.5)}55%{opacity:1}100%{opacity:1;transform:scale(1)}}
   @keyframes sfade{from{opacity:0}to{opacity:1}}
   [hidden]{display:none!important}
 </style>
 </head>
 <body>
-<div id="splash"><div class="box"><img class="splashlogo" src="ydubfflogo.png" alt="Y-Dub Fantasy Football" onerror="this.style.display='none'"><div class="sload">Loading…</div></div></div>
+<div id="splash"><div class="box"><img class="splashlogo" id="splashLogo" src="ydubfflogo.png" alt="Y-Dub Fantasy Football" onerror="this.style.display='none'"><div class="sload">Loading…</div></div></div>
 <div class="wrap">
   <header>
     <div class="mark" id="homeLink" title="Home">
@@ -665,6 +666,11 @@
   $("#homeLink").onclick=()=>{ if(typeof hidePCard==="function") hidePCard(); $("#detail").hidden=true; $("#home").hidden=false;
     view="matchups"; [...$("#viewSeg").children].forEach(x=>x.setAttribute("aria-selected",x.dataset.view==="matchups")); render(); window.scrollTo(0,0); };
 
+  (function(){ const sl=document.getElementById("splashLogo"); if(!sl) return;
+    const show=()=>sl.classList.add("in");
+    if(sl.complete && sl.naturalWidth){ sl.decode?sl.decode().then(show).catch(show):show(); }
+    else { sl.addEventListener("load",()=>{ sl.decode?sl.decode().then(show).catch(show):show(); }); }
+  })();
   function dismissSplash(){ const s=$("#splash"); if(!s) return; s.classList.add("hide"); setTimeout(()=>s.remove(),540); }
   const splashStart=Date.now();
   loadAll().finally(()=>setTimeout(dismissSplash, Math.max(0, 1600-(Date.now()-splashStart))));
