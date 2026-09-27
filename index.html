@@ -54,6 +54,10 @@
   .theme-btn{flex:none;width:40px;height:40px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:17px;cursor:pointer;display:grid;place-items:center}
   .theme-btn:hover{border-color:var(--line-strong)}
 
+  #installBar{display:flex;align-items:center;gap:10px;background:var(--accent);color:var(--on-accent);border-radius:10px;padding:11px 12px;margin:12px 0 0;font-weight:600;font-size:14.5px}
+  #installBar span{flex:1;min-width:0}
+  #installBar #installBtn{background:#fff;color:#1E47A0;border:0;border-radius:8px;font-weight:700;padding:8px 16px;cursor:pointer;font-family:var(--brand);text-transform:uppercase;letter-spacing:.04em;font-size:15px;flex:none}
+  #installBar #installX{background:none;border:0;color:var(--on-accent);font-size:16px;cursor:pointer;opacity:.85;flex:none;padding:0 2px}
   .updated{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);padding:9px 2px 0}
   .updated .rdot{width:7px;height:7px;border-radius:50%;background:var(--win)}
   .updated button{margin-left:auto;background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;font-size:13px}
@@ -68,7 +72,9 @@
   .leagues button[aria-selected="true"] .swatch{background:rgba(255,255,255,.9)}
 
   /* View tabs — underline style, not pills */
-  .view{display:flex;gap:22px;border-bottom:1px solid var(--line);margin:10px 0 2px}
+  .view{display:flex;gap:20px;border-bottom:1px solid var(--line);margin:10px 0 2px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .view::-webkit-scrollbar{display:none}
+  .view button{flex:none}
   .view button{background:none;border:0;cursor:pointer;color:var(--muted);font-family:var(--brand);text-transform:uppercase;
     letter-spacing:.06em;font-size:17px;font-weight:600;padding:10px 0;position:relative}
   .view button[aria-selected="true"]{color:var(--ink)}
@@ -131,7 +137,7 @@
   .srail-zone{flex:1;min-height:46px;background:#EC4899;display:grid;place-items:center;overflow:hidden}
   .srail-zone span{writing-mode:vertical-rl;color:#fff;font-family:var(--brand);font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;white-space:nowrap}
   .sboard{flex:1;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--surface)}
-  .stbl{width:100%;border-collapse:separate;border-spacing:0;min-width:540px}
+  .stbl{width:100%;border-collapse:separate;border-spacing:0;min-width:596px}
   .stbl th{font-family:var(--brand);text-transform:uppercase;letter-spacing:.05em;font-weight:600;font-size:12.5px;color:var(--muted);padding:10px 12px 8px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap;text-align:right}
   .stbl th.lft{text-align:left}
   .stbl td{padding:11px 12px;border-top:1px solid var(--line);font-size:16px;font-weight:600;white-space:nowrap}
@@ -154,6 +160,26 @@
   .stbl .ow{font-size:14px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stbl .strk.w{color:var(--win)} .stbl .strk.l{color:var(--loss)} .stbl .strk{font-family:var(--brand);font-weight:700}
   .scrollhint{text-align:center;font-size:11.5px;color:var(--muted);margin:7px 0 0;letter-spacing:.04em;text-transform:uppercase}
+  .stbl .rnkwrap{display:flex;flex-direction:column;align-items:center;min-width:20px;flex:none}
+  .mv{font-size:10px;font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums}
+  .mv.up{color:var(--win)} .mv.dn{color:var(--loss)} .mv.fl{color:var(--line-strong)}
+  .po{display:inline-block;font-family:var(--brand);font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:1px 5px;border-radius:5px;vertical-align:1px;margin-left:2px}
+  .po-in{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+  .po-cl{background:color-mix(in srgb,var(--win) 18%,transparent);color:var(--win)}
+  .po-hunt{background:var(--surface-2);color:var(--muted)}
+  .po-out{background:color-mix(in srgb,var(--loss) 14%,transparent);color:var(--loss)}
+  .stbl .odds{color:#EC4899;font-weight:700}
+  /* Weekly Awards */
+  .awards{display:flex;flex-direction:column;gap:11px;margin-top:12px}
+  .award{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px}
+  .award.tap{cursor:pointer} .award.tap:active{background:var(--surface-2)}
+  .aw-info{flex:1;min-width:0}
+  .aw-title{font-family:var(--brand);text-transform:uppercase;letter-spacing:.04em;font-size:15.5px;color:var(--accent);font-weight:700;line-height:1.1}
+  .aw-title .em{font-size:19px;margin-right:3px;vertical-align:-2px}
+  .aw-team{font-family:var(--brand);font-weight:700;font-size:21px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+  .aw-sub{font-size:15px;color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .aw-go{color:var(--line-strong);font-size:24px;font-weight:700;flex:none}
+  .aw-ph{color:var(--ink);font-size:15px;font-weight:500;padding:4px 0}
 
   /* (legacy) Standings rows + Pink Speedo Zone */
   .strow{display:grid;grid-template-columns:24px 1fr 58px 62px 46px;align-items:center;gap:10px;padding:11px 12px 11px 36px;border-top:1px solid var(--line)}
@@ -311,10 +337,12 @@
   </header>
 
   <div id="home">
+    <div id="installBar" hidden><span>📲 Add Y-Dub to your home screen</span><button id="installBtn">Install</button><button id="installX" aria-label="Dismiss">✕</button></div>
     <div class="updated" id="updated"></div>
     <div class="leagues" role="tablist" id="leagueSeg"></div>
     <div class="view" role="tablist" id="viewSeg">
       <button role="tab" data-view="matchups" aria-selected="true">Matchups</button>
+      <button role="tab" data-view="awards" aria-selected="false">Awards</button>
       <button role="tab" data-view="standings" aria-selected="false">Standings</button>
       <button role="tab" data-view="power" aria-selected="false">Power</button>
     </div>
@@ -388,6 +416,40 @@
   function parseSettings(js){ const lg=js?.fantasy_content?.league; const s=lg?.[1]?.settings?.[0]||{};
     const map={}; (s.stat_categories?.stats||[]).forEach(c=>{ const st=c.stat; if(st) map[String(st.stat_id)]=st.display_name||st.name||("#"+st.stat_id); });
     return { playoffTeams:+(s.num_playoff_teams||6), playoffStart:+(s.playoff_start_week||15), statMap:map }; }
+
+  // playoff status + pink-speedo odds (Monte Carlo estimate)
+  function computeExtras(L){
+    const teams=L.teams, N=L.playoffTeams||6, W=L.regWeeks||14;
+    const rem=t=>Math.max(0,W-(t.wins+t.losses+t.ties));
+    teams.forEach(t=>{ const r=rem(t), maxW=t.wins+r, minW=t.wins;
+      const guaranteedAbove=teams.filter(o=>o!==t && o.wins>maxW).length;
+      const couldBeAbove=teams.filter(o=>o!==t && (o.wins+rem(o))>minW).length;
+      t.po = guaranteedAbove>=N ? "out" : (couldBeAbove<N ? "clinch" : ((t.rank||99)<=N ? "in" : "hunt"));
+    });
+    const mean=teams.reduce((a,t)=>a+t.pf,0)/(teams.length||1);
+    const sd=Math.sqrt(teams.reduce((a,t)=>a+(t.pf-mean)**2,0)/(teams.length||1))||1;
+    const pw=t=>Math.min(0.82,Math.max(0.18,0.5+(t.pf-mean)/(2*sd)*0.5));
+    const SIMS=2000, cnt={}; teams.forEach(t=>cnt[t.id]=0);
+    for(let s=0;s<SIMS;s++){ const arr=teams.map(t=>{ let w=t.wins; const r=rem(t),pi=pw(t); for(let g=0;g<r;g++) if(Math.random()<pi) w++; return {id:t.id,w,pf:t.pf+Math.random()*0.001}; });
+      arr.sort((a,b)=> a.w-b.w || a.pf-b.pf); cnt[arr[0].id]++; }
+    teams.forEach(t=>{ t.odds=Math.round(cnt[t.id]/SIMS*100); });
+  }
+  // rank movement vs previous completed week (one extra fetch)
+  async function loadMovement(L, who){
+    try{
+      const done=L.matchups.length && L.matchups.every(m=>m.status==="postevent");
+      const lastW = done ? L.week : L.week-1;
+      if(lastW<1){ L.teams.forEach(t=>t.move=0); return; }
+      const sc=await getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`league/${LK[who]}/scoreboard;week=${lastW}`));
+      const mts=parseScoreboard(sc), res={};
+      mts.forEach(m=>{ const aw=m.a.score>=m.b.score; res[m.a.id]={won:aw,pts:m.a.score}; res[m.b.id]={won:!aw,pts:m.b.score}; });
+      const prev=L.teams.map(t=>{ const r=res[t.id]||{won:false,pts:0}; return {id:t.id, w:t.wins-(r.won?1:0), pf:t.pf-r.pts}; });
+      prev.sort((a,b)=> b.w-a.w || b.pf-a.pf);
+      const pr={}; prev.forEach((o,i)=>pr[o.id]=i+1);
+      L.teams.forEach(t=>{ t.move=(pr[t.id]||t.rank)-(t.rank||0); });
+    }catch(e){ L.teams.forEach(t=>t.move=0); }
+  }
+  const awardCard=(emoji,title,team,sub)=>`<div class="award tap" data-ti="${esc(team.id)}">${badge(team,44)}<div class="aw-info"><div class="aw-title"><span class="em">${emoji}</span>${esc(title)}</div><div class="aw-team">${esc(team.name)}</div><div class="aw-sub">${esc(sub)}</div></div><span class="aw-go">›</span></div>`;
   function parseRoster(js){
     const team = js?.fantasy_content?.team; if(!team) return null;
     let rosterPart=null; for(const part of team){ if(part && part.roster) rosterPart=part.roster; }
@@ -421,7 +483,9 @@
       if(!st?.fantasy_content) return { id:who, connected:false };
       const s=parseStandings(st), cfg=parseSettings(set), regWeeks=(cfg.playoffStart||15)-1;
       s.teams.forEach(t=>{ const safe=s.teams.some(o=>o!==t && (o.wins+(regWeeks-(o.wins+o.losses+o.ties)))<t.wins); t.speedo=!safe; });
-      return { id:who, connected:true, ...s, playoffTeams:cfg.playoffTeams||6, regWeeks, statMap:cfg.statMap||{}, matchups:parseScoreboard(sc) };
+      const L={ id:who, connected:true, ...s, playoffTeams:cfg.playoffTeams||6, regWeeks, statMap:cfg.statMap||{}, matchups:parseScoreboard(sc) };
+      computeExtras(L); await loadMovement(L, who);
+      return L;
     }catch(e){ return { id:who, connected:false }; }
   }
   async function loadAll(){
@@ -457,10 +521,12 @@
       return;
     }
     if(view==="matchups") c.innerHTML = renderMatchups(L);
+    else if(view==="awards"){ c.innerHTML = renderAwards(L); loadBenchAward(L, L.id); }
     else if(view==="standings") c.innerHTML = renderStandings(L);
     else c.innerHTML = renderPower();
     if(view==="matchups") c.querySelectorAll(".mcard").forEach(el=>el.onclick=()=>openMatchup(+el.dataset.mi));
     if(view==="standings"){ c.querySelectorAll("[data-ti]").forEach(el=>el.onclick=()=>openTeam(li,el.dataset.ti)); positionRail(); }
+    if(view==="awards") c.querySelectorAll("[data-ti]").forEach(el=>el.onclick=()=>openTeam(li,el.dataset.ti));
   }
   function positionRail(){ const safe=document.getElementById("srailSafe"), tbl=document.querySelector(".stbl"); if(!safe||!tbl) return;
     const fd=tbl.querySelector("tbody tr.danger"); safe.style.height = (fd ? fd.offsetTop : 0)+"px";
@@ -483,27 +549,63 @@
     });
     return h+`</div>`;
   }
+  function renderAwards(L){
+    const head=`<div class="sec"><h2>Week ${L.week} Awards</h2>${L.matchups.some(m=>m.status==="midevent")?statusTag("midevent"):(L.matchups.length?statusTag(L.matchups[0].status):"")}</div>`;
+    if(!L.matchups.length) return head+`<div class="center">No games this week yet — check back once matchups post.</div>`;
+    const flat=[]; L.matchups.forEach(m=>{ const aw=m.a.score>=m.b.score, mar=Math.abs(m.a.score-m.b.score);
+      flat.push({t:m.a,opp:m.b,won:aw,mar}); flat.push({t:m.b,opp:m.a,won:!aw,mar}); });
+    const top=flat.reduce((b,x)=>x.t.score>(b?.t.score??-1)?x:b,null);
+    let blow=null,close=null; L.matchups.forEach(m=>{ const mar=Math.abs(m.a.score-m.b.score); const win=m.a.score>=m.b.score?m.a:m.b, lose=m.a.score>=m.b.score?m.b:m.a; if(!blow||mar>blow.mar) blow={win,lose,mar}; if(close===null||mar<close.mar) close={win,lose,mar}; });
+    const winners=flat.filter(x=>x.won), losers=flat.filter(x=>!x.won);
+    const lucky=winners.reduce((b,x)=>x.t.score<(b?.t.score??1e9)?x:b,null);
+    const unlucky=losers.reduce((b,x)=>x.t.score>(b?.t.score??-1)?x:b,null);
+    let h=head+`<div class="awards">`;
+    if(top&&top.t.score>0) h+=awardCard("🏆","Team of the Week",top.t,`league-high ${top.t.score.toFixed(1)} pts`);
+    if(blow&&blow.mar>0) h+=awardCard("💥","Biggest Blowout",blow.win,`beat ${blow.lose.name} by ${blow.mar.toFixed(1)}`);
+    if(close&&close.win&&close.lose&&(close.win.score>0||close.lose.score>0)) h+=awardCard("😬","Nail-Biter",close.win,`edged ${close.lose.name} by ${close.mar.toFixed(1)}`);
+    if(lucky&&lucky.t.score>0) h+=awardCard("🍀","Lucky Duck",lucky.t,`won with just ${lucky.t.score.toFixed(1)} pts`);
+    if(unlucky&&unlucky.t.score>0) h+=awardCard("💔","Tough Beat",unlucky.t,`lost despite ${unlucky.t.score.toFixed(1)} pts`);
+    h+=`<div class="award" id="benchAward"><div class="aw-ph">🪑 Tallying bench regret…</div></div>`;
+    return h+`</div><p class="spdnote">Awards update live as scores come in. Tap a team to see its lineup.</p>`;
+  }
+  async function loadBenchAward(L, who){
+    const el=()=>document.getElementById("benchAward");
+    try{
+      const rosters=await Promise.all(L.teams.map(t=>
+        getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`team/${L.key}.t.${t.id}/roster;week=${L.week}/players/stats;type=week;week=${L.week}`))
+          .then(parseRoster).catch(()=>null)));
+      let best=null; L.teams.forEach((t,i)=>{ const r=rosters[i]; if(!r) return; const bp=(r.bench||[]).reduce((a,p)=>a+(p.pts||0),0); if(!best||bp>best.bp) best={t,bp}; });
+      const node=el(); if(!node) return;
+      if(best&&best.bp>0){ node.outerHTML=awardCard("🪑","Bench Regret",best.t,`left ${best.bp.toFixed(1)} pts on the bench`);
+        const nn=document.querySelector('.awards [data-ti="'+CSS.escape(String(best.t.id))+'"]'); if(nn) nn.onclick=()=>openTeam(li,best.t.id); }
+      else node.remove();
+    }catch(e){ const node=el(); if(node) node.remove(); }
+  }
   function renderStandings(L){
     const line=L.playoffTeams||6, firstRisk=L.teams.findIndex(t=>t.speedo);
     const wpct=t=>{ const gp=t.wins+t.losses+t.ties; return gp?Math.round((t.wins+0.5*t.ties)/gp*100):0; };
     let rows="";
+    const poTag={in:["IN","po-in"],hunt:["HUNT","po-hunt"],clinch:["✓ CLINCH","po-cl"],out:["OUT","po-out"]};
     L.teams.forEach((t,i)=>{ const sc=t.streak?.[0]==="W"?"w":"l"; const cls=(t.speedo?"danger ":"")+(i===line?"cutline ":"")+"tap";
+      const mv = t.move>0?`<span class="mv up">▲${t.move}</span>`:(t.move<0?`<span class="mv dn">▼${-t.move}</span>`:`<span class="mv fl">–</span>`);
+      const po = poTag[t.po]||["",""];
       rows+=`<tr class="${cls}" data-ti="${esc(t.id)}">
-        <td class="c-team stick"><div class="tmcell"><span class="rnk">${t.rank||i+1}</span>${badge(t,30)}<span class="tmtxt"><span class="nm">${esc(t.name)}${t.speedo?SPEEDO:""}</span><span class="ow">${esc(t.owner)}</span></span></div></td>
+        <td class="c-team stick"><div class="tmcell"><span class="rnkwrap"><span class="rnk">${t.rank||i+1}</span>${mv}</span>${badge(t,30)}<span class="tmtxt"><span class="nm">${esc(t.name)}${t.speedo?SPEEDO:""}</span><span class="ow">${esc(t.owner)}${po[0]?` <span class="po ${po[1]}">${po[0]}</span>`:""}</span></span></div></td>
         <td class="num">${t.wins}-${t.losses}${t.ties?"-"+t.ties:""}</td>
         <td class="num muted">${t.pf.toFixed(1)}</td>
         <td class="num muted">${t.pa.toFixed(1)}</td>
         <td class="num">${wpct(t)}%</td>
         <td class="num">${t.streak?`<b class="strk ${sc}">${esc(t.streak)}</b>`:"—"}</td>
-        <td class="num muted">${t.moves||0}</td></tr>`; });
+        <td class="num muted">${t.moves||0}</td>
+        <td class="num">${t.speedo?`<b class="odds">${t.odds}%</b>`:`<span class="muted">—</span>`}</td></tr>`; });
     const note = firstRisk>=0
-      ? `<p class="spdnote">${SPEEDO} <b>Pink Speedo watch.</b> Every pink team can still finish dead last — the icon drops once they’re mathematically safe. Last place wears it.</p>`
+      ? `<p class="spdnote">${SPEEDO} <b>Pink Speedo watch.</b> Every pink team can still finish dead last — the icon drops once they’re mathematically safe. Last place wears it. The <b>LAST%</b> column is each team’s estimated odds of finishing dead last.</p>`
       : `<p class="spdnote">${SPEEDO} Last place is locked in — the Pink Speedo has an owner.</p>`;
     const rail = firstRisk>=0 ? `<div class="srail"><div class="srail-safe" id="srailSafe"></div><div class="srail-zone"><span>Pink Speedo Zone</span></div></div>` : "";
     return `<div class="sec"><h2>${esc(L.name)}</h2></div>
       <div class="stwrap">${rail}
         <div class="sboard"><table class="stbl">
-          <thead><tr><th class="c-team stick lft">Team</th><th class="num">Rec</th><th class="num">PF</th><th class="num">PA</th><th class="num">Win%</th><th class="num">Strk</th><th class="num">Mv</th></tr></thead>
+          <thead><tr><th class="c-team stick lft">Team</th><th class="num">Rec</th><th class="num">PF</th><th class="num">PA</th><th class="num">Win%</th><th class="num">Strk</th><th class="num">Mv</th><th class="num" title="Estimated chance of finishing dead last">LAST%</th></tr></thead>
           <tbody>${rows}</tbody></table></div>
       </div>
       <div class="scrollhint">← swipe stats →</div>${note}`;
@@ -524,13 +626,20 @@
   // ---- Matchup detail ----
   function showDetail(inner){ $("#detail").innerHTML=inner; $("#detail").hidden=false; $("#home").hidden=true; window.scrollTo(0,0); }
   function hideDetail(){ $("#detail").hidden=true; $("#home").hidden=false; window.scrollTo(0,0); }
+  // ---- Back-button / history nav ----
+  const navStack=[];
+  function navPush(closeFn){ navStack.push(closeFn); try{ history.pushState({ydub:navStack.length},""); }catch(e){} }
+  function navBack(){ if(navStack.length){ try{ history.back(); }catch(e){ const f=navStack.pop(); if(f) f(); } } }
+  function navReset(){ const n=navStack.length; navStack.length=0; try{ if(n) history.go(-n); }catch(e){} }
+  addEventListener("popstate", ()=>{ const f=navStack.pop(); if(f) f(); });
   const pav = p => `<span class="pav" style="--pc:${POSC[p.pos]||'#456'}">${p.photo?`<img src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.remove()">`:esc(mono(p.name))}</span>`;
   const pmeta = p => `<span class="pm">${esc(p.pos)} · ${esc(p.team||"—")}${p.status?` <span class="inj">${esc(p.status)}</span>`:""}</span>`;
 
   async function openMatchup(mi){
     const L=leagues[li], m=L.matchups[mi];
+    navPush(hideDetail);
     showDetail(`<button class="back" id="backBtn">‹ Back to Week ${L.week}</button><div class="center"><span class="spin"></span>Loading lineups…</div>`);
-    $("#backBtn").onclick=hideDetail;
+    $("#backBtn").onclick=navBack;
     const wk=L.week, who=L.id, key=L.key;
     const path = id => `team/${key}.t.${id}/roster;week=${wk}/players/stats;type=week;week=${wk}`;
     let la,lb;
@@ -538,7 +647,7 @@
       const [ra,rb]=await Promise.all([ getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(path(m.a.id))), getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(path(m.b.id))) ]);
       la=parseRoster(ra); lb=parseRoster(rb);
     }catch(e){}
-    if(!la||!lb){ showDetail(`<button class="back" id="bb">‹ Back</button><div class="center">Couldn’t load lineups. Try again.</div>`); $("#bb").onclick=hideDetail; return; }
+    if(!la||!lb){ showDetail(`<button class="back" id="bb">‹ Back</button><div class="center">Couldn’t load lineups. Try again.</div>`); $("#bb").onclick=navBack; return; }
     curDetail={m,la,lb,statMap:L.statMap||{}}; renderDetail();
   }
   function statLine(p,statMap){
@@ -575,7 +684,7 @@
        ${wp}${toggle}
        ${detMode==="pts"?`<div class="legend">${legend}</div>`:""}
        ${lineupHTML}`);
-    $("#backBtn").onclick=hideDetail;
+    $("#backBtn").onclick=navBack;
     $("#detail").querySelectorAll(".detmode button").forEach(b=>b.onclick=()=>{ detMode=b.dataset.dm; renderDetail(); });
     pmap={};
     [...la.starters,...la.bench].forEach(p=>{ if(p.key) pmap[p.key]={p,team:m.a}; });
@@ -585,7 +694,7 @@
 
   // ---- Player card ----
   function showPCard(inner){ const el=$("#pcard"); el.innerHTML=`<div class="pc" id="pcInner">${inner}</div>`; el.hidden=false;
-    el.onclick=(e)=>{ if(e.target===el) hidePCard(); }; document.body.style.overflow="hidden"; }
+    el.onclick=(e)=>{ if(e.target===el) navBack(); }; document.body.style.overflow="hidden"; }
   function hidePCard(){ $("#pcard").hidden=true; $("#pcard").innerHTML=""; document.body.style.overflow=""; }
   function playerParts(js){ const pl=js?.fantasy_content?.player; return Array.isArray(pl)?pl.slice(1):[]; }
   const pstatsOf = js => { for(const part of playerParts(js)) if(part?.player_stats) return (part.player_stats.stats||[]).map(s=>({id:String(s.stat.stat_id),val:s.stat.value})).filter(x=>x.val&&x.val!=="0"&&x.val!==0&&x.val!=="0.00"); return []; };
@@ -594,6 +703,7 @@
 
   function openPlayer(pk){
     const e=pmap[pk]; if(!e) return;
+    navPush(hidePCard);
     const p=e.p, ft=e.team, statMap=leagues[li]?.statMap||{}, who=leagues[li]?.id||"A";
     const g=nflFor(p.team);
     let gameHTML;
@@ -618,7 +728,7 @@
        <div class="pc-sec"><div class="pc-h">This week's stat line</div><div class="pc-line">${esc(line)}</div></div>
        <div id="pcExtra"><div class="pc-sec"><div class="pc-h">Season</div><div class="pc-line" style="color:var(--muted)">Loading…</div></div></div>
        <div class="pc-sec"><div class="pc-h">Rostered by</div><div class="pc-team">${badge(ft,28)}<span>${esc(ft.name)} · ${esc(ft.owner)}</span></div></div>`);
-    $("#pcClose").onclick=hidePCard;
+    $("#pcClose").onclick=navBack;
     if(p.key) (async()=>{
       try{
         const [ss,po]=await Promise.all([
@@ -636,12 +746,12 @@
 
   async function openTeam(lgi, ti){
     const L=leagues[lgi]; const t=L?.teams.find(x=>String(x.id)===String(ti)); if(!t) return;
-    curDetail=null;
+    curDetail=null; navPush(hideDetail);
     showDetail(`<button class="back" id="backBtn">‹ Back</button><div class="center"><span class="spin"></span>Loading ${esc(t.name)}…</div>`);
-    $("#backBtn").onclick=hideDetail;
+    $("#backBtn").onclick=navBack;
     let ros;
     try{ const r=await getJSON(`${FN}/y?who=${L.id}&p=`+encodeURIComponent(`team/${L.key}.t.${ti}/roster;week=${L.week}/players/stats;type=week;week=${L.week}`)); ros=parseRoster(r); }catch(e){}
-    if(!ros){ showDetail(`<button class="back" id="bb">‹ Back</button><div class="center">Couldn’t load roster.</div>`); $("#bb").onclick=hideDetail; return; }
+    if(!ros){ showDetail(`<button class="back" id="bb">‹ Back</button><div class="center">Couldn’t load roster.</div>`); $("#bb").onclick=navBack; return; }
     pmap={}; [...ros.starters,...ros.bench].forEach(p=>{ if(p.key) pmap[p.key]={p,team:t}; });
     const prow=(p)=>`<div class="srow tap" data-pk="${esc(p.key||'')}"><span class="sslot">${esc(p.slot||"")}</span>${pav(p)}<div class="sinfo"><span class="pn">${esc(p.name||"—")}</span><span class="pstat2"><b class="spos" style="color:${POSC[p.pos]||'#456'}">${esc(p.pos)}</b> · ${esc(p.team||"—")}${p.status?` · <b style="color:var(--loss)">${esc(p.status)}</b>`:""}</span></div><span class="pts" style="color:var(--ink)">${p.pts.toFixed(1)}</span></div>`;
     showDetail(
@@ -649,7 +759,7 @@
        <div class="tphead">${badge(t,54)}<div class="tpinfo"><div class="tpname">${esc(t.name)}</div><div class="tpown">${esc(t.owner)} · ${esc(L.name)}</div>
          <div class="tpkv"><span><b>#${t.rank}</b>Rank</span><span><b>${t.wins}-${t.losses}${t.ties?'-'+t.ties:''}</b>Rec</span><span><b>${t.pf.toFixed(1)}</b>PF</span><span><b>${t.pa.toFixed(1)}</b>PA</span></div></div></div>
        <div class="lineup"><div class="secrow">Starters · Week ${L.week}</div>${ros.starters.map(prow).join("")}<div class="secrow">Bench</div>${ros.bench.map(prow).join("")}</div>`);
-    $("#backBtn").onclick=hideDetail;
+    $("#backBtn").onclick=navBack;
     $("#detail").querySelectorAll("[data-pk]").forEach(el=>{ if(el.dataset.pk) el.onclick=()=>openPlayer(el.dataset.pk); });
   }
 
@@ -661,9 +771,25 @@
   tb.onclick=()=>{ const dark=root.getAttribute("data-theme")==="dark"||(!root.getAttribute("data-theme")&&matchMedia("(prefers-color-scheme: dark)").matches);
     const n=dark?"light":"dark"; applyTheme(n); try{localStorage.setItem("ydub-theme",n);}catch(e){} };
 
+  // ---- Install (Add to Home Screen) ----
+  let deferredPrompt=null;
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone=matchMedia("(display-mode: standalone)").matches || navigator.standalone===true;
+  function showInstall(){ if(isStandalone) return; try{ if(sessionStorage.getItem("ydub-inst-x")) return; }catch(e){} $("#installBar").hidden=false; }
+  function hideInstall(){ $("#installBar").hidden=true; }
+  addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferredPrompt=e; showInstall(); });
+  addEventListener("appinstalled", ()=>{ deferredPrompt=null; hideInstall(); });
+  if(isIOS && !isStandalone) showInstall();
+  $("#installBtn").onclick=async()=>{
+    if(deferredPrompt){ deferredPrompt.prompt(); const r=await deferredPrompt.userChoice.catch(()=>null); deferredPrompt=null; if(r&&r.outcome==="accepted") hideInstall(); }
+    else if(isIOS){ alert('To install: tap the Share button (the box with an ↑) at the bottom of Safari, then choose “Add to Home Screen.”'); }
+    else { alert('In Chrome: tap the ⋮ menu (top-right), then “Add to Home screen” / “Install app.”'); }
+  };
+  $("#installX").onclick=()=>{ hideInstall(); try{ sessionStorage.setItem("ydub-inst-x","1"); }catch(e){} };
+
   addEventListener("resize",()=>{ if(view==="standings" && !$("#home").hidden) positionRail(); });
   document.fonts?.ready?.then(()=>{ if(view==="standings" && !$("#home").hidden) positionRail(); });
-  $("#homeLink").onclick=()=>{ if(typeof hidePCard==="function") hidePCard(); $("#detail").hidden=true; $("#home").hidden=false;
+  $("#homeLink").onclick=()=>{ hidePCard(); hideDetail(); navReset();
     view="matchups"; [...$("#viewSeg").children].forEach(x=>x.setAttribute("aria-selected",x.dataset.view==="matchups")); render(); window.scrollTo(0,0); };
 
   (function(){ const sl=document.getElementById("splashLogo"); if(!sl) return;
