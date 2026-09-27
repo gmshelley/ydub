@@ -180,6 +180,15 @@
   .aw-sub{font-size:15px;color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
   .aw-go{color:var(--line-strong);font-size:24px;font-weight:700;flex:none}
   .aw-ph{color:var(--ink);font-size:15px;font-weight:500;padding:4px 0}
+  .wknav{display:flex;align-items:center;justify-content:center;gap:14px;margin:6px 0 4px}
+  .wkbtn{width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:24px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+  .wkbtn:active{background:var(--surface-2)}
+  .wkbtn:disabled{opacity:.32;cursor:default}
+  .wklabel{font-family:var(--brand);font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:.03em;min-width:150px;text-align:center;display:flex;align-items:center;justify-content:center;gap:9px}
+  .awlock{background:var(--surface);border:1px dashed var(--line-strong);border-radius:16px;padding:30px 22px;text-align:center;margin-top:14px}
+  .awlock-em{font-size:42px;line-height:1}
+  .awlock-t{font-family:var(--brand);font-weight:700;font-size:21px;margin-top:12px}
+  .awlock-s{font-size:15px;color:var(--ink);line-height:1.5;margin-top:8px;max-width:440px;margin-left:auto;margin-right:auto}
 
   /* (legacy) Standings rows + Pink Speedo Zone */
   .strow{display:grid;grid-template-columns:24px 1fr 58px 62px 46px;align-items:center;gap:10px;padding:11px 12px 11px 36px;border-top:1px solid var(--line)}
@@ -415,7 +424,7 @@
   }
   function parseSettings(js){ const lg=js?.fantasy_content?.league; const s=lg?.[1]?.settings?.[0]||{};
     const map={}; (s.stat_categories?.stats||[]).forEach(c=>{ const st=c.stat; if(st) map[String(st.stat_id)]=st.display_name||st.name||("#"+st.stat_id); });
-    return { playoffTeams:+(s.num_playoff_teams||6), playoffStart:+(s.playoff_start_week||15), statMap:map }; }
+    return { playoffTeams:+(s.num_playoff_teams||6), playoffStart:+(s.playoff_start_week||15), endWeek:+(s.end_week||17), statMap:map }; }
 
   // playoff status + pink-speedo odds (Monte Carlo estimate)
   function computeExtras(L){
@@ -473,6 +482,7 @@
   }
 
   let leagues=[], li=0, view="matchups", detMode="pts", curDetail=null, pmap={};
+  let awardsWeek=null; const awardsCache={};
   async function getJSON(u){ const r=await fetch(u,{cache:"no-store"}); return r.json(); }
   async function loadLeague(who){
     try{
@@ -483,7 +493,7 @@
       if(!st?.fantasy_content) return { id:who, connected:false };
       const s=parseStandings(st), cfg=parseSettings(set), regWeeks=(cfg.playoffStart||15)-1;
       s.teams.forEach(t=>{ const safe=s.teams.some(o=>o!==t && (o.wins+(regWeeks-(o.wins+o.losses+o.ties)))<t.wins); t.speedo=!safe; });
-      const L={ id:who, connected:true, ...s, playoffTeams:cfg.playoffTeams||6, regWeeks, statMap:cfg.statMap||{}, matchups:parseScoreboard(sc) };
+      const L={ id:who, connected:true, ...s, playoffTeams:cfg.playoffTeams||6, regWeeks, endWeek:cfg.endWeek||17, statMap:cfg.statMap||{}, matchups:parseScoreboard(sc) };
       computeExtras(L); await loadMovement(L, who);
       return L;
     }catch(e){ return { id:who, connected:false }; }
@@ -521,12 +531,11 @@
       return;
     }
     if(view==="matchups") c.innerHTML = renderMatchups(L);
-    else if(view==="awards"){ c.innerHTML = renderAwards(L); loadBenchAward(L, L.id); }
+    else if(view==="awards"){ if(awardsWeek==null) awardsWeek=L.week||1; c.innerHTML = renderAwardsShell(L); wireAwardsNav(L); loadAwards(L); }
     else if(view==="standings") c.innerHTML = renderStandings(L);
     else c.innerHTML = renderPower();
     if(view==="matchups") c.querySelectorAll(".mcard").forEach(el=>el.onclick=()=>openMatchup(+el.dataset.mi));
     if(view==="standings"){ c.querySelectorAll("[data-ti]").forEach(el=>el.onclick=()=>openTeam(li,el.dataset.ti)); positionRail(); }
-    if(view==="awards") c.querySelectorAll("[data-ti]").forEach(el=>el.onclick=()=>openTeam(li,el.dataset.ti));
   }
   function positionRail(){ const safe=document.getElementById("srailSafe"), tbl=document.querySelector(".stbl"); if(!safe||!tbl) return;
     const fd=tbl.querySelector("tbody tr.danger"); safe.style.height = (fd ? fd.offsetTop : 0)+"px";
@@ -549,31 +558,78 @@
     });
     return h+`</div>`;
   }
-  function renderAwards(L){
-    const head=`<div class="sec"><h2>Week ${L.week} Awards</h2>${L.matchups.some(m=>m.status==="midevent")?statusTag("midevent"):(L.matchups.length?statusTag(L.matchups[0].status):"")}</div>`;
-    if(!L.matchups.length) return head+`<div class="center">No games this week yet — check back once matchups post.</div>`;
-    const flat=[]; L.matchups.forEach(m=>{ const aw=m.a.score>=m.b.score, mar=Math.abs(m.a.score-m.b.score);
+  function renderAwardsShell(L){
+    const wk=awardsWeek, max=L.endWeek||17;
+    return `<div class="sec"><h2>Awards</h2></div>
+      <div class="wknav"><button class="wkbtn" id="awPrev" ${wk<=1?"disabled":""} aria-label="Previous week">‹</button>
+        <div class="wklabel">Week ${wk} <span id="awStatus"></span></div>
+        <button class="wkbtn" id="awNext" ${wk>=max?"disabled":""} aria-label="Next week">›</button></div>
+      <div id="awardsBody"><div class="aw-ph" style="text-align:center;padding:26px 0">Loading Week ${wk}…</div></div>`;
+  }
+  function wireAwardsNav(L){
+    const max=L.endWeek||17;
+    const p=$("#awPrev"), n=$("#awNext");
+    if(p) p.onclick=()=>{ if(awardsWeek>1){ awardsWeek--; render(); } };
+    if(n) n.onclick=()=>{ if(awardsWeek<max){ awardsWeek++; render(); } };
+  }
+  async function getWeekMatchups(L, week){
+    if(week===L.week) return L.matchups;
+    const ck=L.id+"-"+week; if(awardsCache[ck]) return awardsCache[ck];
+    const sc=await getJSON(`${FN}/y?who=${L.id}&p=`+encodeURIComponent(`league/${LK[L.id]}/scoreboard;week=${week}`));
+    const mts=parseScoreboard(sc); awardsCache[ck]=mts; return mts;
+  }
+  function weekStatus(L, week, mts){
+    if(week>L.week) return "future";
+    if(!mts||!mts.length) return week<L.week ? "complete" : "notstarted";
+    if(mts.every(m=>m.status==="postevent")) return "complete";
+    if(mts.some(m=>m.status==="midevent")) return "live";
+    return "notstarted";
+  }
+  function awLockHTML(status, wk){
+    const map={
+      future:["🔒",`Week ${wk} is coming up`,`These awards unlock the moment the last game of that week goes final.`],
+      live:["🏈",`Week ${wk} is live`,`Awards lock in as soon as the last fantasy game of the week finishes — swing back then for Team of the Week, the Blowout, Bench Regret and more.`],
+      notstarted:["🗓️",`Week ${wk} hasn’t kicked off yet`,`Awards will be available once the week’s final fantasy game has completed.`]
+    };
+    const [em,t,s]=map[status]||map.notstarted;
+    return `<div class="awlock"><div class="awlock-em">${em}</div><div class="awlock-t">${t}</div><div class="awlock-s">${s}</div></div>`;
+  }
+  function awardCardsHTML(mts){
+    const flat=[]; mts.forEach(m=>{ const aw=m.a.score>=m.b.score, mar=Math.abs(m.a.score-m.b.score);
       flat.push({t:m.a,opp:m.b,won:aw,mar}); flat.push({t:m.b,opp:m.a,won:!aw,mar}); });
     const top=flat.reduce((b,x)=>x.t.score>(b?.t.score??-1)?x:b,null);
-    let blow=null,close=null; L.matchups.forEach(m=>{ const mar=Math.abs(m.a.score-m.b.score); const win=m.a.score>=m.b.score?m.a:m.b, lose=m.a.score>=m.b.score?m.b:m.a; if(!blow||mar>blow.mar) blow={win,lose,mar}; if(close===null||mar<close.mar) close={win,lose,mar}; });
+    let blow=null,close=null; mts.forEach(m=>{ const mar=Math.abs(m.a.score-m.b.score); const win=m.a.score>=m.b.score?m.a:m.b, lose=m.a.score>=m.b.score?m.b:m.a; if(!blow||mar>blow.mar) blow={win,lose,mar}; if(close===null||mar<close.mar) close={win,lose,mar}; });
     const winners=flat.filter(x=>x.won), losers=flat.filter(x=>!x.won);
     const lucky=winners.reduce((b,x)=>x.t.score<(b?.t.score??1e9)?x:b,null);
     const unlucky=losers.reduce((b,x)=>x.t.score>(b?.t.score??-1)?x:b,null);
-    let h=head+`<div class="awards">`;
+    let h=`<div class="awards">`;
     if(top&&top.t.score>0) h+=awardCard("🏆","Team of the Week",top.t,`league-high ${top.t.score.toFixed(1)} pts`);
     if(blow&&blow.mar>0) h+=awardCard("💥","Biggest Blowout",blow.win,`beat ${blow.lose.name} by ${blow.mar.toFixed(1)}`);
     if(close&&close.win&&close.lose&&(close.win.score>0||close.lose.score>0)) h+=awardCard("😬","Nail-Biter",close.win,`edged ${close.lose.name} by ${close.mar.toFixed(1)}`);
     if(lucky&&lucky.t.score>0) h+=awardCard("🍀","Lucky Duck",lucky.t,`won with just ${lucky.t.score.toFixed(1)} pts`);
     if(unlucky&&unlucky.t.score>0) h+=awardCard("💔","Tough Beat",unlucky.t,`lost despite ${unlucky.t.score.toFixed(1)} pts`);
     h+=`<div class="award" id="benchAward"><div class="aw-ph">🪑 Tallying bench regret…</div></div>`;
-    return h+`</div><p class="spdnote">Awards update live as scores come in. Tap a team to see its lineup.</p>`;
+    return h+`</div><p class="spdnote">Final results — tap any team to see its Week lineup.</p>`;
   }
-  async function loadBenchAward(L, who){
+  async function loadAwards(L){
+    const wk=awardsWeek; let mts=[];
+    try{ mts=await getWeekMatchups(L, wk); }catch(e){ mts=[]; }
+    if(view!=="awards" || awardsWeek!==wk) return;
+    const body=$("#awardsBody"); if(!body) return;
+    const status=weekStatus(L, wk, mts);
+    const tag=$("#awStatus"); if(tag) tag.innerHTML = status==="complete"?statusTag("postevent"):status==="live"?statusTag("midevent"):statusTag("preevent");
+    if(status!=="complete"){ body.innerHTML = awLockHTML(status, wk); return; }
+    body.innerHTML = awardCardsHTML(mts);
+    body.querySelectorAll("[data-ti]").forEach(el=>el.onclick=()=>openTeam(li, el.dataset.ti));
+    loadBenchAward(L, L.id, wk);
+  }
+  async function loadBenchAward(L, who, week){
     const el=()=>document.getElementById("benchAward");
     try{
       const rosters=await Promise.all(L.teams.map(t=>
-        getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`team/${L.key}.t.${t.id}/roster;week=${L.week}/players/stats;type=week;week=${L.week}`))
+        getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`team/${L.key}.t.${t.id}/roster;week=${week}/players/stats;type=week;week=${week}`))
           .then(parseRoster).catch(()=>null)));
+      if(view!=="awards" || awardsWeek!==week) return;
       let best=null; L.teams.forEach((t,i)=>{ const r=rosters[i]; if(!r) return; const bp=(r.bench||[]).reduce((a,p)=>a+(p.pts||0),0); if(!best||bp>best.bp) best={t,bp}; });
       const node=el(); if(!node) return;
       if(best&&best.bp>0){ node.outerHTML=awardCard("🪑","Bench Regret",best.t,`left ${best.bp.toFixed(1)} pts on the bench`);
