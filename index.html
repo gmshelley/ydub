@@ -98,6 +98,8 @@
   .matchups{display:flex;flex-direction:column;gap:10px}
   .mcard{background:var(--surface);border:1px solid var(--line);border-radius:9px;overflow:hidden;width:100%;text-align:left;color:inherit;cursor:pointer;padding:0}
   .mcard:hover{border-color:var(--line-strong)}
+  .mcard.gotw{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent)}
+  .gotw-ribbon{background:var(--accent);color:#fff;font-family:var(--brand);font-weight:700;text-transform:uppercase;letter-spacing:.09em;font-size:11.5px;text-align:center;padding:5px 8px}
   .team{display:flex;align-items:center;gap:12px;padding:13px 14px}
   .team .who{flex:1;min-width:0}
   .team .name{font-family:var(--brand);font-weight:600;font-size:21px;line-height:1.04;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -189,6 +191,17 @@
   .awlock-em{font-size:42px;line-height:1}
   .awlock-t{font-family:var(--brand);font-weight:700;font-size:21px;margin-top:12px}
   .awlock-s{font-size:15px;color:var(--ink);line-height:1.5;margin-top:8px;max-width:440px;margin-left:auto;margin-right:auto}
+  .awsub{text-align:center;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin:2px 0 0}
+  .lgchip{display:inline-block;font-family:var(--brand);font-size:10.5px;font-weight:700;letter-spacing:.04em;color:#fff;background:var(--c,var(--accent));padding:1px 6px;border-radius:5px;vertical-align:2px}
+  .aw-face{width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--surface-2);flex:none}
+  .aw-face.ph{display:flex;align-items:center;justify-content:center;font-family:var(--brand);font-weight:700;font-size:13px;color:var(--muted)}
+  /* Weekly Recap */
+  .recap{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 18px;margin-top:12px}
+  .recap-tag{font-family:var(--brand);text-transform:uppercase;letter-spacing:.1em;font-size:11.5px;font-weight:700;color:var(--accent)}
+  .recap-head{font-family:var(--brand);font-weight:700;font-size:25px;line-height:1.1;margin:7px 0 4px;text-transform:none;letter-spacing:0}
+  .recap p{font-size:16px;line-height:1.62;margin:13px 0;color:var(--ink)}
+  .recap p b{font-weight:700}
+  .recap-foot{font-size:12.5px !important;color:var(--muted) !important;font-style:italic;border-top:1px solid var(--line);padding-top:12px;margin-top:16px !important;line-height:1.4 !important}
 
   /* (legacy) Standings rows + Pink Speedo Zone */
   .strow{display:grid;grid-template-columns:24px 1fr 58px 62px 46px;align-items:center;gap:10px;padding:11px 12px 11px 36px;border-top:1px solid var(--line)}
@@ -351,6 +364,7 @@
     <div class="leagues" role="tablist" id="leagueSeg"></div>
     <div class="view" role="tablist" id="viewSeg">
       <button role="tab" data-view="matchups" aria-selected="true">Matchups</button>
+      <button role="tab" data-view="recap" aria-selected="false">Recap</button>
       <button role="tab" data-view="awards" aria-selected="false">Awards</button>
       <button role="tab" data-view="standings" aria-selected="false">Standings</button>
       <button role="tab" data-view="power" aria-selected="false">Power</button>
@@ -418,7 +432,7 @@
           score:+(p.team_points?.total||0), proj:+(p.team_projected_points?.total||0),
           winprob: p.win_probability!=null ? Math.round(p.win_probability*100) : null });
       }
-      out.push({ status:m.status, a:sides[0], b:sides[1] });
+      out.push({ status:m.status, gotw:m.is_matchup_of_the_week==="1", playoffs:m.is_playoffs==="1", a:sides[0], b:sides[1] });
     }
     return out;
   }
@@ -458,7 +472,12 @@
       L.teams.forEach(t=>{ t.move=(pr[t.id]||t.rank)-(t.rank||0); });
     }catch(e){ L.teams.forEach(t=>t.move=0); }
   }
-  const awardCard=(emoji,title,team,sub)=>`<div class="award tap" data-ti="${esc(team.id)}">${badge(team,44)}<div class="aw-info"><div class="aw-title"><span class="em">${emoji}</span>${esc(title)}</div><div class="aw-team">${esc(team.name)}</div><div class="aw-sub">${esc(sub)}</div></div><span class="aw-go">›</span></div>`;
+  const lgChip=meta=>meta?`<span class="lgchip" style="--c:${meta.color}">${esc(meta.label)}</span>`:"";
+  const awardCard=(emoji,title,team,sub,meta)=>`<div class="award tap" data-ti="${esc(team.id)}" data-gi="${meta?meta.gi:li}">${badge(team,44)}<div class="aw-info"><div class="aw-title"><span class="em">${emoji}</span>${esc(title)}</div><div class="aw-team">${esc(team.name)} ${lgChip(meta)}</div><div class="aw-sub">${esc(sub)}</div></div><span class="aw-go">›</span></div>`;
+  const playerAwardCard=(emoji,title,player,team,meta)=>{
+    const face=player.photo?`<img class="aw-face" src="${esc(player.photo)}" alt="" loading="lazy">`:`<span class="aw-face ph">${esc(player.pos||"?")}</span>`;
+    return `<div class="award tap" data-pi="${esc(meta.gi+"-"+team.id)}" data-ti="${esc(team.id)}" data-gi="${meta.gi}">${face}<div class="aw-info"><div class="aw-title"><span class="em">${emoji}</span>${esc(title)}</div><div class="aw-team">${esc(player.name)}</div><div class="aw-sub">${player.pts.toFixed(1)} pts · ${esc(player.pos)} · ${esc(team.name)} ${lgChip(meta)}</div></div><span class="aw-go">›</span></div>`;
+  };
   function parseRoster(js){
     const team = js?.fantasy_content?.team; if(!team) return null;
     let rosterPart=null; for(const part of team){ if(part && part.roster) rosterPart=part.roster; }
@@ -531,7 +550,8 @@
       return;
     }
     if(view==="matchups") c.innerHTML = renderMatchups(L);
-    else if(view==="awards"){ if(awardsWeek==null) awardsWeek=L.week||1; c.innerHTML = renderAwardsShell(L); wireAwardsNav(L); loadAwards(L); }
+    else if(view==="recap"){ if(awardsWeek==null) awardsWeek=(connLeagues()[0]?.week)||L.week||1; c.innerHTML = renderRecapShell(); wireRecapNav(); loadRecap(); }
+    else if(view==="awards"){ if(awardsWeek==null) awardsWeek=(connLeagues()[0]?.week)||L.week||1; c.innerHTML = renderAwardsShell(); wireAwardsNav(); loadAwards(); }
     else if(view==="standings") c.innerHTML = renderStandings(L);
     else c.innerHTML = renderPower();
     if(view==="matchups") c.querySelectorAll(".mcard").forEach(el=>el.onclick=()=>openMatchup(+el.dataset.mi));
@@ -554,21 +574,46 @@
         <div><div class="score">${t.score.toFixed(1)}</div><span class="proj">proj ${t.proj.toFixed(0)}</span></div></div>`;
       const pa=m.a.winprob, pb=m.b.winprob;
       const wp = (pa!=null&&pb!=null) ? `<span class="pct">${pa}%</span><span class="wp"><i style="width:${pa}%;background:${barColor()}"></i><i style="width:${pb}%;background:var(--line-strong)"></i></span><span class="pct">${pb}%</span>` : `<span class="vs">vs</span>`;
-      h+=`<button class="mcard" data-mi="${mi}">${row(m.a,aLead)}<div class="mid">${wp}</div>${row(m.b,!aLead)}<div class="taphint">Full lineups ›</div></button>`;
+      const ribbon = m.gotw ? `<div class="gotw-ribbon">⭐ Game of the Week</div>` : "";
+      h+=`<button class="mcard${m.gotw?" gotw":""}" data-mi="${mi}">${ribbon}${row(m.a,aLead)}<div class="mid">${wp}</div>${row(m.b,!aLead)}<div class="taphint">Full lineups ›</div></button>`;
     });
     return h+`</div>`;
   }
-  function renderAwardsShell(L){
-    const wk=awardsWeek, max=L.endWeek||17;
+  const connLeagues=()=>leagues.filter(l=>l.connected);
+  const awMax=()=>Math.max(17,...connLeagues().map(l=>l.endWeek||17));
+  function lgMeta(L){ return { gi:leagues.indexOf(L), label:(L.name.match(/AFC|NFC/i)?.[0]||L.name.split(/\s+/).pop()||("Lg "+L.id)), color:(LGC[L.id]?.tag||"var(--accent)") }; }
+  // recap personas (match by team name or owner)
+  const PERSONAS=[
+    {key:"tht", test:t=>/two-hand touchdown/i.test(t.name)||/garrett/i.test(t.owner), hero:true},
+    {key:"jesse", test:t=>/lott of damage/i.test(t.name)||/^jesse\b/i.test(t.owner)},
+    {key:"mccann", test:t=>/run bmc/i.test(t.name)||/^brian\b/i.test(t.owner)},
+    {key:"tom", test:t=>/tominator/i.test(t.name)||/^tom\b/i.test(t.owner)},
+    {key:"kosich", test:t=>/kosich/i.test(t.owner)||/kosich/i.test(t.name)},
+  ];
+  const personaFor=t=>PERSONAS.find(p=>p.test(t))||null;
+  function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  const pick=(rng,arr)=>arr[Math.floor(rng()*arr.length)];
+  const rosterCache={};
+  async function getWeekRosters(L, week){
+    const ck=L.id+"-"+week; if(rosterCache[ck]) return rosterCache[ck];
+    const arr=await Promise.all(L.teams.map(async t=>{
+      try{ const r=await getJSON(`${FN}/y?who=${L.id}&p=`+encodeURIComponent(`team/${L.key}.t.${t.id}/roster;week=${week}/players/stats;type=week;week=${week}`)); return {t, roster:parseRoster(r)}; }
+      catch(e){ return {t, roster:null}; }
+    }));
+    rosterCache[ck]=arr; return arr;
+  }
+  function renderAwardsShell(){
+    const lgs=connLeagues(), wk=awardsWeek, max=awMax();
+    const sub = lgs.length>1 ? `Both leagues · ${lgs.map(l=>lgMeta(l).label).join(" + ")}` : "Weekly awards";
     return `<div class="sec"><h2>Awards</h2></div>
       <div class="wknav"><button class="wkbtn" id="awPrev" ${wk<=1?"disabled":""} aria-label="Previous week">‹</button>
         <div class="wklabel">Week ${wk} <span id="awStatus"></span></div>
         <button class="wkbtn" id="awNext" ${wk>=max?"disabled":""} aria-label="Next week">›</button></div>
+      <p class="awsub">${esc(sub)}</p>
       <div id="awardsBody"><div class="aw-ph" style="text-align:center;padding:26px 0">Loading Week ${wk}…</div></div>`;
   }
-  function wireAwardsNav(L){
-    const max=L.endWeek||17;
-    const p=$("#awPrev"), n=$("#awNext");
+  function wireAwardsNav(){
+    const max=awMax(), p=$("#awPrev"), n=$("#awNext");
     if(p) p.onclick=()=>{ if(awardsWeek>1){ awardsWeek--; render(); } };
     if(n) n.onclick=()=>{ if(awardsWeek<max){ awardsWeek++; render(); } };
   }
@@ -585,6 +630,13 @@
     if(mts.some(m=>m.status==="midevent")) return "live";
     return "notstarted";
   }
+  function combinedStatus(sts){
+    if(!sts.length) return "future";
+    if(sts.every(s=>s==="complete")) return "complete";
+    if(sts.some(s=>s==="live")) return "live";
+    if(sts.some(s=>s==="notstarted")) return "notstarted";
+    return "future";
+  }
   function awLockHTML(status, wk){
     const map={
       future:["🔒",`Week ${wk} is coming up`,`These awards unlock the moment the last game of that week goes final.`],
@@ -594,48 +646,214 @@
     const [em,t,s]=map[status]||map.notstarted;
     return `<div class="awlock"><div class="awlock-em">${em}</div><div class="awlock-t">${t}</div><div class="awlock-s">${s}</div></div>`;
   }
-  function awardCardsHTML(mts){
-    const flat=[]; mts.forEach(m=>{ const aw=m.a.score>=m.b.score, mar=Math.abs(m.a.score-m.b.score);
-      flat.push({t:m.a,opp:m.b,won:aw,mar}); flat.push({t:m.b,opp:m.a,won:!aw,mar}); });
-    const top=flat.reduce((b,x)=>x.t.score>(b?.t.score??-1)?x:b,null);
-    let blow=null,close=null; mts.forEach(m=>{ const mar=Math.abs(m.a.score-m.b.score); const win=m.a.score>=m.b.score?m.a:m.b, lose=m.a.score>=m.b.score?m.b:m.a; if(!blow||mar>blow.mar) blow={win,lose,mar}; if(close===null||mar<close.mar) close={win,lose,mar}; });
-    const winners=flat.filter(x=>x.won), losers=flat.filter(x=>!x.won);
-    const lucky=winners.reduce((b,x)=>x.t.score<(b?.t.score??1e9)?x:b,null);
-    const unlucky=losers.reduce((b,x)=>x.t.score>(b?.t.score??-1)?x:b,null);
+  function awardCardsHTML(lgs, byId){
+    const flat=[], games=[];
+    lgs.forEach(L=>{ const meta=lgMeta(L); (byId.get(L.id)||[]).forEach(m=>{
+      const aw=m.a.score>=m.b.score, mar=Math.abs(m.a.score-m.b.score);
+      flat.push({t:m.a,opp:m.b,won:aw,score:m.a.score,proj:m.a.proj,meta});
+      flat.push({t:m.b,opp:m.a,won:!aw,score:m.b.score,proj:m.b.proj,meta});
+      games.push({win:aw?m.a:m.b, lose:aw?m.b:m.a, mar, meta});
+    }); });
+    const top=flat.reduce((b,x)=>x.score>(b?.score??-1)?x:b,null);
+    const cold=flat.reduce((b,x)=>x.score<(b?.score??1e9)?x:b,null);
+    const blow=games.reduce((b,g)=>g.mar>(b?.mar??-1)?g:b,null);
+    const close=games.reduce((b,g)=> b===null||g.mar<b.mar?g:b,null);
+    const lucky=flat.filter(x=>x.won).reduce((b,x)=>x.score<(b?.score??1e9)?x:b,null);
+    const unlucky=flat.filter(x=>!x.won).reduce((b,x)=>x.score>(b?.score??-1)?x:b,null);
+    const over=flat.reduce((b,x)=>{ const d=x.score-x.proj; return (x.proj>0 && d>(b?.d??-1e9))?{...x,d}:b; },null);
     let h=`<div class="awards">`;
-    if(top&&top.t.score>0) h+=awardCard("🏆","Team of the Week",top.t,`league-high ${top.t.score.toFixed(1)} pts`);
-    if(blow&&blow.mar>0) h+=awardCard("💥","Biggest Blowout",blow.win,`beat ${blow.lose.name} by ${blow.mar.toFixed(1)}`);
-    if(close&&close.win&&close.lose&&(close.win.score>0||close.lose.score>0)) h+=awardCard("😬","Nail-Biter",close.win,`edged ${close.lose.name} by ${close.mar.toFixed(1)}`);
-    if(lucky&&lucky.t.score>0) h+=awardCard("🍀","Lucky Duck",lucky.t,`won with just ${lucky.t.score.toFixed(1)} pts`);
-    if(unlucky&&unlucky.t.score>0) h+=awardCard("💔","Tough Beat",unlucky.t,`lost despite ${unlucky.t.score.toFixed(1)} pts`);
+    if(top&&top.score>0) h+=awardCard("🏆","Team of the Week",top.t,`league-high ${top.score.toFixed(1)} pts`,top.meta);
+    if(top&&cold&&cold.t!==top.t&&cold.score>0) h+=awardCard("🧊","Cold Shower",cold.t,`week-low ${cold.score.toFixed(1)} pts`,cold.meta);
+    if(blow&&blow.mar>0) h+=awardCard("💥","Biggest Blowout",blow.win,`beat ${blow.lose.name} by ${blow.mar.toFixed(1)}`,blow.meta);
+    if(close&&(close.win.score>0||close.lose.score>0)) h+=awardCard("😬","Nail-Biter",close.win,`edged ${close.lose.name} by ${close.mar.toFixed(1)}`,close.meta);
+    if(lucky&&lucky.score>0) h+=awardCard("🍀","Lucky Duck",lucky.t,`won with just ${lucky.score.toFixed(1)} pts`,lucky.meta);
+    if(unlucky&&unlucky.score>0) h+=awardCard("💔","Tough Beat",unlucky.t,`lost despite ${unlucky.score.toFixed(1)} pts`,unlucky.meta);
+    if(over&&over.d>0) h+=awardCard("🎯","Over-Achiever",over.t,`beat projection by ${over.d.toFixed(1)}`,over.meta);
+    h+=`<div class="award" id="potwAward"><div class="aw-ph">⭐ Finding the top player…</div></div>`;
     h+=`<div class="award" id="benchAward"><div class="aw-ph">🪑 Tallying bench regret…</div></div>`;
-    return h+`</div><p class="spdnote">Final results — tap any team to see its Week lineup.</p>`;
+    return h+`</div><p class="spdnote">Final results — tap any card to see that team’s lineup.</p>`;
   }
-  async function loadAwards(L){
-    const wk=awardsWeek; let mts=[];
-    try{ mts=await getWeekMatchups(L, wk); }catch(e){ mts=[]; }
+  async function loadAwards(){
+    const lgs=connLeagues(), wk=awardsWeek, byId=new Map();
+    await Promise.all(lgs.map(async L=>{ try{ byId.set(L.id, await getWeekMatchups(L,wk)); }catch(e){ byId.set(L.id,[]); } }));
     if(view!=="awards" || awardsWeek!==wk) return;
     const body=$("#awardsBody"); if(!body) return;
-    const status=weekStatus(L, wk, mts);
+    const status=combinedStatus(lgs.map(L=>weekStatus(L,wk,byId.get(L.id))));
     const tag=$("#awStatus"); if(tag) tag.innerHTML = status==="complete"?statusTag("postevent"):status==="live"?statusTag("midevent"):statusTag("preevent");
     if(status!=="complete"){ body.innerHTML = awLockHTML(status, wk); return; }
-    body.innerHTML = awardCardsHTML(mts);
-    body.querySelectorAll("[data-ti]").forEach(el=>el.onclick=()=>openTeam(li, el.dataset.ti));
-    loadBenchAward(L, L.id, wk);
+    body.innerHTML = awardCardsHTML(lgs, byId);
+    body.querySelectorAll(".award[data-ti]").forEach(el=>el.onclick=()=>openTeam(+el.dataset.gi, el.dataset.ti));
+    loadRosterAwards(lgs, wk);
   }
-  async function loadBenchAward(L, who, week){
-    const el=()=>document.getElementById("benchAward");
+  async function loadRosterAwards(lgs, week){
     try{
-      const rosters=await Promise.all(L.teams.map(t=>
-        getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`team/${L.key}.t.${t.id}/roster;week=${week}/players/stats;type=week;week=${week}`))
-          .then(parseRoster).catch(()=>null)));
+      const perL=await Promise.all(lgs.map(async L=>({meta:lgMeta(L), rosters:await getWeekRosters(L,week)})));
       if(view!=="awards" || awardsWeek!==week) return;
-      let best=null; L.teams.forEach((t,i)=>{ const r=rosters[i]; if(!r) return; const bp=(r.bench||[]).reduce((a,p)=>a+(p.pts||0),0); if(!best||bp>best.bp) best={t,bp}; });
-      const node=el(); if(!node) return;
-      if(best&&best.bp>0){ node.outerHTML=awardCard("🪑","Bench Regret",best.t,`left ${best.bp.toFixed(1)} pts on the bench`);
-        const nn=document.querySelector('.awards [data-ti="'+CSS.escape(String(best.t.id))+'"]'); if(nn) nn.onclick=()=>openTeam(li,best.t.id); }
-      else node.remove();
-    }catch(e){ const node=el(); if(node) node.remove(); }
+      let bench=null, potw=null;
+      perL.forEach(({meta,rosters})=>{ rosters.forEach(({t,roster})=>{ if(!roster) return;
+        const bp=(roster.bench||[]).reduce((a,p)=>a+(p.pts||0),0); if(!bench||bp>bench.bp) bench={t,meta,bp};
+        [...roster.starters,...roster.bench].forEach(p=>{ if(!potw||(p.pts||0)>potw.p.pts) potw={p,t,meta}; }); }); });
+      const pn=document.getElementById("potwAward");
+      if(pn){ if(potw&&potw.p.pts>0){ pn.outerHTML=playerAwardCard("⭐","Player of the Week",potw.p,potw.t,potw.meta);
+          const nn=document.querySelector('.award[data-pi="'+CSS.escape(potw.meta.gi+"-"+potw.t.id)+'"]'); if(nn) nn.onclick=()=>openTeam(potw.meta.gi,potw.t.id); }
+        else pn.remove(); }
+      const bnode=document.getElementById("benchAward");
+      if(bnode){ if(bench&&bench.bp>0){ bnode.outerHTML=awardCard("🪑","Bench Regret",bench.t,`left ${bench.bp.toFixed(1)} pts on the bench`,bench.meta);
+          const nn=document.querySelector('.award[data-ti="'+CSS.escape(String(bench.t.id))+'"][data-gi="'+bench.meta.gi+'"]'); if(nn) nn.onclick=()=>openTeam(bench.meta.gi,bench.t.id); }
+        else bnode.remove(); }
+    }catch(e){ ["potwAward","benchAward"].forEach(id=>{ const n=document.getElementById(id); if(n) n.remove(); }); }
+  }
+  async function buildRecapData(lgs, week){
+    const mtsByL=new Map();
+    await Promise.all(lgs.map(async L=>{ try{ mtsByL.set(L, await getWeekMatchups(L,week)); }catch(e){ mtsByL.set(L,[]); } }));
+    const status=combinedStatus(lgs.map(L=>weekStatus(L,week,mtsByL.get(L))));
+    if(status!=="complete") return {complete:false, status, week};
+    const rosByL=new Map();
+    await Promise.all(lgs.map(async L=>{ rosByL.set(L, await getWeekRosters(L,week)); }));
+    const teamsW=[], games=[], gotw=[];
+    lgs.forEach(L=>{ const meta=lgMeta(L); const rmap={}; (rosByL.get(L)||[]).forEach(r=>{ rmap[r.t.id]=r.roster; });
+      (mtsByL.get(L)||[]).forEach(m=>{
+        const aw=m.a.score>=m.b.score, mar=Math.abs(m.a.score-m.b.score);
+        games.push({meta, win:aw?m.a:m.b, lose:aw?m.b:m.a, mar});
+        if(m.gotw) gotw.push({meta, win:aw?m.a:m.b, lose:aw?m.b:m.a, mar});
+        [[m.a,m.b,aw],[m.b,m.a,!aw]].forEach(([t,opp,won])=>{
+          const roster=rmap[t.id]||{starters:[],bench:[]};
+          const starters=roster.starters||[], bench=roster.bench||[];
+          const benchPts=bench.reduce((a,p)=>a+(p.pts||0),0);
+          const flexS=starters.filter(p=>p.slot!=="K"&&p.slot!=="DEF");
+          teamsW.push({team:t, opp, won, score:t.score, proj:t.proj, meta,
+            topStarter:starters.reduce((b,p)=>(!b||p.pts>b.pts)?p:b,null),
+            worstStarter:flexS.reduce((b,p)=>(!b||p.pts<b.pts)?p:b,null),
+            benchStud:bench.reduce((b,p)=>(!b||p.pts>b.pts)?p:b,null),
+            benchPts, persona:personaFor(t)});
+        });
+      });
+    });
+    const byScore=[...teamsW].sort((a,b)=>b.score-a.score);
+    const find=k=>teamsW.find(x=>x.persona&&x.persona.key===k);
+    return {complete:true, week, teamsW, games,
+      top:byScore[0], cold:byScore[byScore.length-1],
+      blow:games.reduce((b,g)=>g.mar>(b?.mar??-1)?g:b,null),
+      nail:games.reduce((b,g)=> b===null||g.mar<b.mar?g:b,null),
+      lucky:teamsW.filter(x=>x.won).sort((a,b)=>a.score-b.score)[0],
+      unlucky:teamsW.filter(x=>!x.won).sort((a,b)=>b.score-a.score)[0],
+      potw:(()=>{ let bp=null; teamsW.forEach(x=>[x.topStarter,x.benchStud].filter(Boolean).forEach(p=>{ if(!bp||p.pts>bp.p.pts) bp={p,x}; })); return bp; })(),
+      benchReg:teamsW.reduce((b,x)=>(!b||x.benchPts>b.benchPts)?x:b,null),
+      gotw, pezel:teamsW.find(x=>/team turf toe/i.test(x.team.name)),
+      tht:find("tht"), jesse:find("jesse"), mccann:find("mccann"), tom:find("tom"), kosich:find("kosich")};
+  }
+  function renderRecap(d){
+    const wk=d.week, rng=mulberry32((wk*2654435761)>>>0), P=[];
+    const nm=x=>esc(x?.team?.name||""), own=x=>esc(x?.team?.owner||""), sc=x=>x?x.score.toFixed(1):"0";
+    const en=s=>esc(s||"");
+    const headline=pick(rng,[
+      `Week ${wk}: ${nm(d.top)} Ate, and ${nm(d.cold)} Got Ate`,
+      `Week ${wk}: Somebody Feasted, ${nm(d.cold)} Face-Planted`,
+      `Week ${wk}: ${nm(d.top)} Dropped a Bomb, ${nm(d.cold)} Dropped the Ball`,
+    ]);
+    P.push(pick(rng,[
+      `Gather ’round, gentlemen — fake football, real feelings. Commish Pezel has certified the carnage as official and denied all three of your “injury” appeals.`,
+      `Whistle’s blown on Week ${wk}. Somewhere Pezel is pretending he doesn’t have a commissioner’s edit button, and somewhere Tom is running a swim club instead of his lineup.`,
+      `Pull up a lane, dads. The group text is already a warzone and Commish Pezel says the results stand. No, he will not be reviewing your trade.`,
+    ]));
+    if(d.gotw&&d.gotw.length) P.push(pick(rng,[
+      `📺 Yahoo’s <b>Game of the Week</b>: ${d.gotw.map(g=>`<b>${en(g.win.name)}</b> handled <b>${en(g.lose.name)}</b> ${g.mar.toFixed(1)}`).join(" · and over in the other league, ")}. The marquee delivered — or at least Yahoo swears it did.`,
+      `📺 The people’s main event (per Yahoo’s <b>Game of the Week</b> tag): ${d.gotw.map(g=>`<b>${en(g.win.name)}</b> over <b>${en(g.lose.name)}</b> by ${g.mar.toFixed(1)}`).join(", and ")}.`,
+    ]));
+    if(d.top) P.push(pick(rng,[
+      `👑 <b>${nm(d.top)}</b> (${own(d.top)}) torched the entire field for <b>${sc(d.top)}</b>. Everyone else can screenshot that and weep into their protein shake.`,
+      `👑 League-wide beatdown: <b>${nm(d.top)}</b> hung <b>${sc(d.top)}</b> on the board. Chef’s kiss. Nobody within a ZIP code.`,
+    ]));
+    if(d.cold) P.push(pick(rng,[
+      `🧊 Meanwhile <b>${nm(d.cold)}</b> mustered a frostbitten <b>${sc(d.cold)}</b>. That’s not a lineup, that’s a cry for help.`,
+      `🧊 And then there’s <b>${nm(d.cold)}</b> with <b>${sc(d.cold)}</b> — the fantasy equivalent of a belly-flop off the high dive. Everyone saw it. Everyone winced.`,
+    ]));
+    if(d.blow&&d.blow.mar>0) P.push(pick(rng,[
+      `💥 <b>${en(d.blow.win.name)}</b> took <b>${en(d.blow.lose.name)}</b> to the woodshed by <b>${d.blow.mar.toFixed(1)}</b>. That wasn’t a matchup, it was a hostage situation.`,
+      `💥 Biggest curb-stomp of the week: <b>${en(d.blow.win.name)}</b> over <b>${en(d.blow.lose.name)}</b> by <b>${d.blow.mar.toFixed(1)}</b>. Somebody run a wellness check on ${en(d.blow.lose.owner)}.`,
+    ]));
+    if(d.nail&&d.nail.win) P.push(pick(rng,[
+      `😬 <b>${en(d.nail.win.name)}</b> survived <b>${en(d.nail.lose.name)}</b> by a measly <b>${d.nail.mar.toFixed(1)}</b> — the kind of win you don’t brag about but absolutely bank.`,
+    ]));
+    if(d.potw&&d.potw.p&&d.potw.p.pts>0) P.push(pick(rng,[
+      `⭐ Human cheat code of the week: <b>${en(d.potw.p.name)}</b> dropped <b>${d.potw.p.pts.toFixed(1)}</b> for ${nm(d.potw.x)}. Draft-day genius or dumb luck? Yes.`,
+    ]));
+    if(d.benchReg&&d.benchReg.benchStud&&d.benchReg.benchPts>0) P.push(pick(rng,[
+      `🪑 <b>${nm(d.benchReg)}</b> left <b>${d.benchReg.benchPts.toFixed(1)}</b> on the pine — headlined by ${en(d.benchReg.benchStud.name)} (${(d.benchReg.benchStud.pts||0).toFixed(1)}) — because ${own(d.benchReg)} apparently enjoys pain. Start your studs, champ.`,
+    ]));
+    if(d.tht){ const t=d.tht; P.push(pick(rng, t.won ? [
+      `🏊 <b>Two-Hand Touchdown</b> handled business like the class of this league, banking <b>${sc(t)}</b> in a W. Garrett out here making it look easy — championship pedigree, baby.`,
+      `🏊 As expected, <b>Two-Hand Touchdown</b> looked like the smartest team in the room, cruising to <b>${sc(t)}</b> and a win. Garrett’s building something special.`,
+    ] : [
+      `🏊 Don’t let the result fool you: <b>Two-Hand Touchdown</b> still posted a sturdy <b>${sc(t)}</b> and looked dangerous doing it. The scoreboard lied; Garrett’s contender is just loading up for the playoff push.`,
+      `🏊 <b>Two-Hand Touchdown</b> ran into a freak week but flashed elite tape at <b>${sc(t)}</b>. Nobody wants to see Garrett’s squad come December — mark it down.`,
+    ])); }
+    if(d.jesse&&d.mccann){ const j=d.jesse, mc=d.mccann;
+      P.push(pick(rng, j.score>=mc.score ? [
+        `⚔️ The eternal <b>Jesse vs. McCann</b> cold war: Jesse’s Lott of Damage (<b>${sc(j)}</b>) out-pointed <b>McCann</b>’s RUN BMC (<b>${sc(mc)}</b>). Brian now owes the group chat a paragraph of excuses — we’ll wait.`,
+        `⚔️ <b>Jesse ${sc(j)}, McCann ${sc(mc)}.</b> Jesse wins the only matchup that actually matters to him. Somewhere Brian is drafting, deleting, and re-drafting a rebuttal text.`,
+      ] : [
+        `⚔️ Mark it down: <b>McCann</b>’s RUN BMC (<b>${sc(mc)}</b>) outscored <b>Jesse</b>’s Lott of Damage (<b>${sc(j)}</b>). Brian gets a full week of insufferability on the pool deck, and Jesse gets to pretend he doesn’t care.`,
+        `⚔️ <b>McCann ${sc(mc)}, Jesse ${sc(j)}.</b> Brian takes the bragging rights this week — cue the “as I predicted” speech. Rough stretch to hold Lott of Damage stock.`,
+      ])); }
+    else if(d.jesse){ const j=d.jesse; P.push(pick(rng, j.won ? [
+      `⚔️ <b>Jesse</b>’s Lott of Damage got the W (<b>${sc(j)}</b>), which means McCann has to marinate in it all week.`,
+    ] : [
+      `⚔️ <b>Jesse</b> laid an egg (${sc(j)}), gifting McCann a full week of insufferability.`,
+    ])); }
+    if(d.tom){ const t=d.tom; P.push(pick(rng, t.won ? [
+      `🏛️ Stop the presses — club president <b>Tom</b> actually won (<b>${sc(t)}</b>). Running the swim club AND cashing a fantasy W? Frame it, because the Tominator does not do this often.`,
+    ] : [
+      `🏛️ Club president <b>Tom</b>’s Tominator managed <b>${sc(t)}</b> and another L. Mr. President, respectfully: delegate the lineup like you delegate the snack schedule.`,
+      `🏛️ The Tominator (aka Prez <b>Tom</b>) got dunked on again — <b>${sc(t)}</b>. Between running the club and running this roster into a ditch, at least one of those is a full-time job.`,
+    ])); }
+    if(d.kosich){ const k=d.kosich; P.push(pick(rng, k.won ? [
+      `😇 <b>The Heavenly Hunk</b> (Kosich) looked good AND won with <b>${sc(k)}</b>. Unfair. The face card never declines and apparently neither did the lineup.`,
+    ] : [
+      `😇 <b>The Heavenly Hunk</b> (Kosich) served looks but not points — <b>${sc(k)}</b> and an L. The jawline stays undefeated; the roster, less so.`,
+    ])); }
+    if(d.pezel){ const z=d.pezel; P.push(pick(rng, z.won ? [
+      `🧑‍⚖️ Your commissioner of BOTH leagues, <b>Dan Pezel</b>, ruled everyone else’s disputes “legal” and then steered Team Turf Toe to a fat <b>${sc(z)}</b> and a W. Judge, jury, and a contender — the conflict of interest writes itself.`,
+      `🧑‍⚖️ Running two leagues AND cashing a win with Team Turf Toe (<b>${sc(z)}</b>)? Commish <b>Dan Pezel</b> is either a genius or abusing the edit button. We report, you decide.`,
+    ] : [
+      `🧑‍⚖️ Commish <b>Dan Pezel</b> spent the week policing two leagues and forgot to police his own lineup — Team Turf Toe limped to <b>${sc(z)}</b>. Physician, heal thyself.`,
+      `🧑‍⚖️ Even with the keys to both leagues, <b>Dan Pezel</b> couldn’t rig Team Turf Toe past <b>${sc(z)}</b> this week. Some things even a commissioner can’t override.`,
+    ])); }
+    P.push(pick(rng,[
+      `That’s a wrap. Hydrate, cope, and set your lineups. Pezel’s watching. 🏆`,
+      `See you on the pool deck, where the trash talk is louder than the starter pistol. 🏆`,
+    ]));
+    return `<div class="recap"><div class="recap-tag">Week ${wk} · NFC + AFC</div><h2 class="recap-head">${en(headline)}</h2>${P.map(p=>`<p>${p}</p>`).join("")}<p class="recap-foot">Auto-scribbled by the Y-Dub Beat Writer. All slander is in good fun. Mostly.</p></div>`;
+  }
+  function recapLockHTML(status, wk){
+    const map={
+      future:["🔒",`Week ${wk} hasn’t happened yet`,`The beat writer needs games to talk trash about — check back after Week ${wk} wraps.`],
+      live:["✍️",`Week ${wk} is still cooking`,`The recap drops the moment the week’s final game goes final. Can’t roast a game that isn’t over.`],
+      notstarted:["🗓️",`Week ${wk} hasn’t kicked off`,`No snaps, no smack talk. The recap posts once the week is in the books.`]
+    };
+    const [em,t,s]=map[status]||map.notstarted;
+    return `<div class="awlock"><div class="awlock-em">${em}</div><div class="awlock-t">${t}</div><div class="awlock-s">${s}</div></div>`;
+  }
+  function renderRecapShell(){
+    const wk=awardsWeek, max=awMax();
+    return `<div class="sec"><h2>Weekly Recap</h2></div>
+      <div class="wknav"><button class="wkbtn" id="rcPrev" ${wk<=1?"disabled":""} aria-label="Previous week">‹</button>
+        <div class="wklabel">Week ${wk} <span id="rcStatus"></span></div>
+        <button class="wkbtn" id="rcNext" ${wk>=max?"disabled":""} aria-label="Next week">›</button></div>
+      <div id="recapBody"><div class="aw-ph" style="text-align:center;padding:26px 0">Writing up Week ${wk}…</div></div>`;
+  }
+  function wireRecapNav(){
+    const max=awMax(), p=$("#rcPrev"), n=$("#rcNext");
+    if(p) p.onclick=()=>{ if(awardsWeek>1){ awardsWeek--; render(); } };
+    if(n) n.onclick=()=>{ if(awardsWeek<max){ awardsWeek++; render(); } };
+  }
+  async function loadRecap(){
+    const lgs=connLeagues(), wk=awardsWeek;
+    const d=await buildRecapData(lgs, wk);
+    if(view!=="recap" || awardsWeek!==wk) return;
+    const body=$("#recapBody"); if(!body) return;
+    const tag=$("#rcStatus"); if(tag) tag.innerHTML = d.complete?statusTag("postevent"):(d.status==="live"?statusTag("midevent"):statusTag("preevent"));
+    body.innerHTML = d.complete ? renderRecap(d) : recapLockHTML(d.status, wk);
   }
   function renderStandings(L){
     const line=L.playoffTeams||6, firstRisk=L.teams.findIndex(t=>t.speedo);
