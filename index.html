@@ -731,98 +731,158 @@
     });
     const byScore=[...teamsW].sort((a,b)=>b.score-a.score);
     const find=k=>teamsW.find(x=>x.persona&&x.persona.key===k);
-    return {complete:true, week, teamsW, games,
-      top:byScore[0], cold:byScore[byScore.length-1],
-      blow:games.reduce((b,g)=>g.mar>(b?.mar??-1)?g:b,null),
+    // Two-Hand Touchdown is protected — never appears in a negative beat
+    const thtId=(find("tht")||{}).team?.id;
+    const noTHT=teamsW.filter(x=>x.team.id!==thtId);
+    return {complete:true, week, teamsW, games, thtId,
+      top:byScore[0],
+      cold:[...noTHT].sort((a,b)=>a.score-b.score)[0],
+      blow:games.filter(g=>g.lose.id!==thtId).reduce((b,g)=>g.mar>(b?.mar??-1)?g:b,null),
       nail:games.reduce((b,g)=> b===null||g.mar<b.mar?g:b,null),
-      lucky:teamsW.filter(x=>x.won).sort((a,b)=>a.score-b.score)[0],
-      unlucky:teamsW.filter(x=>!x.won).sort((a,b)=>b.score-a.score)[0],
+      lucky:noTHT.filter(x=>x.won).sort((a,b)=>a.score-b.score)[0],
+      unlucky:noTHT.filter(x=>!x.won).sort((a,b)=>b.score-a.score)[0],
       potw:(()=>{ let bp=null; teamsW.forEach(x=>[x.topStarter,x.benchStud].filter(Boolean).forEach(p=>{ if(!bp||p.pts>bp.p.pts) bp={p,x}; })); return bp; })(),
-      benchReg:teamsW.reduce((b,x)=>(!b||x.benchPts>b.benchPts)?x:b,null),
+      benchReg:noTHT.reduce((b,x)=>(!b||x.benchPts>b.benchPts)?x:b,null),
+      over:teamsW.reduce((b,x)=>{ const dd=x.score-x.proj; return (x.proj>0&&(!b||dd>b.d))?{x,d:dd}:b; },null),
+      under:noTHT.reduce((b,x)=>{ const dd=x.score-x.proj; return (x.proj>0&&(!b||dd<b.d))?{x,d:dd}:b; },null),
+      goose:noTHT.reduce((b,x)=> (x.worstStarter&&(!b||x.worstStarter.pts<b.p.pts))?{x,p:x.worstStarter}:b, null),
       gotw, pezel:teamsW.find(x=>/team turf toe/i.test(x.team.name)),
       tht:find("tht"), jesse:find("jesse"), mccann:find("mccann"), tom:find("tom"), kosich:find("kosich")};
   }
   function renderRecap(d){
-    const wk=d.week, rng=mulberry32((wk*2654435761)>>>0), P=[];
-    const nm=x=>esc(x?.team?.name||""), own=x=>esc(x?.team?.owner||""), sc=x=>x?x.score.toFixed(1):"0";
-    const en=s=>esc(s||"");
+    const wk=d.week, rng=mulberry32(((wk*2654435761)^0x9e3779b9)>>>0);
+    const nm=x=>esc(x?.team?.name||""), sc=x=>x?x.score.toFixed(1):"0", en=s=>esc(s||"");
+    const PNICK=[[/tominator/i,"club prez Tom"],[/coin toss greg kosich/i,"the Heavenly Hunk"],[/team turf toe/i,"Commish Pezel"],[/lott of damage/i,"Jesse"],[/run bmc/i,"McCann"]];
+    const nick=team=>{ if(!team) return ""; for(const [re,n] of PNICK){ if(re.test(team.name||"")) return n; } return ""; };
+    const whoT=team=>{ if(!team) return ""; const o=team.owner||"", nk=nick(team);
+      if(!nk || nk.toLowerCase()===o.toLowerCase()) return `<b>${esc(team.name)}</b> (${esc(o)})`;
+      if(o && nk.toLowerCase().includes(o.toLowerCase())) return `<b>${esc(team.name)}</b> (${esc(nk)})`;
+      return `<b>${esc(team.name)}</b> (${esc(o)} · ${esc(nk)})`; };
+    const shuffle=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+
     const headline=pick(rng,[
-      `Week ${wk}: ${nm(d.top)} Ate, and ${nm(d.cold)} Got Ate`,
+      `Week ${wk}: ${nm(d.top)} Ate, ${nm(d.cold)} Got Ate`,
       `Week ${wk}: Somebody Feasted, ${nm(d.cold)} Face-Planted`,
       `Week ${wk}: ${nm(d.top)} Dropped a Bomb, ${nm(d.cold)} Dropped the Ball`,
+      `Week ${wk}: The Good, The Bad, and ${nm(d.cold)}`,
+      `Week ${wk}: ${nm(d.top)} Threw a Party, Forgot to Invite ${nm(d.cold)}`,
+      `Week ${wk}: Points Were Scored, Feelings Were Hurt`,
+      `Week ${wk}: Buckle Up, Fellas`,
     ]);
+
+    const P=[];
     P.push(pick(rng,[
-      `Gather ’round, gentlemen — fake football, real feelings. Commish Pezel has certified the carnage as official and denied all three of your “injury” appeals.`,
-      `Whistle’s blown on Week ${wk}. Somewhere Pezel is pretending he doesn’t have a commissioner’s edit button, and somewhere Tom is running a swim club instead of his lineup.`,
-      `Pull up a lane, dads. The group text is already a warzone and Commish Pezel says the results stand. No, he will not be reviewing your trade.`,
+      `Gather ’round, degenerates — fake football, real feelings. Results are final, excuses are already flying, and no, the commish will not review your “injury.”`,
+      `Whistle’s blown on Week ${wk}: ten winners, ten losers, and twenty guys convinced they got robbed.`,
+      `Pull up a lane, dads. The group text is a warzone, the waiver wire is a crime scene, and somebody still hasn’t set a lineup all year.`,
+      `Another week in the books. Grab a towel, wipe the tears, roll the tape.`,
+      `Week ${wk} is done. Somewhere a trophy gleams; somewhere a grown man is yelling at a kicker.`,
+      `Fresh scores, fresh shame. Let’s hand out the flowers and the funerals.`,
     ]));
+
     if(d.gotw&&d.gotw.length) P.push(pick(rng,[
-      `📺 Yahoo’s <b>Game of the Week</b>: ${d.gotw.map(g=>`<b>${en(g.win.name)}</b> handled <b>${en(g.lose.name)}</b> ${g.mar.toFixed(1)}`).join(" · and over in the other league, ")}. The marquee delivered — or at least Yahoo swears it did.`,
-      `📺 The people’s main event (per Yahoo’s <b>Game of the Week</b> tag): ${d.gotw.map(g=>`<b>${en(g.win.name)}</b> over <b>${en(g.lose.name)}</b> by ${g.mar.toFixed(1)}`).join(", and ")}.`,
+      `📺 Yahoo slapped the <b>Game of the Week</b> tag on ${d.gotw.map(g=>`<b>${en(g.win.name)}</b> over <b>${en(g.lose.name)}</b> (${g.mar.toFixed(1)})`).join(" and ")}. The marquee delivered — or Yahoo swears it did.`,
+      `📺 The people’s main event, per Yahoo’s <b>Game of the Week</b>: ${d.gotw.map(g=>`<b>${en(g.win.name)}</b> handled <b>${en(g.lose.name)}</b> by ${g.mar.toFixed(1)}`).join(", and ")}.`,
+      `📺 Yahoo’s <b>Game of the Week</b> spotlight landed on ${d.gotw.map(g=>`<b>${en(g.win.name)}</b> vs <b>${en(g.lose.name)}</b>`).join(" and ")} — and it wasn’t as close as billed.`,
     ]));
+
     if(d.top) P.push(pick(rng,[
-      `👑 <b>${nm(d.top)}</b> (${own(d.top)}) torched the entire field for <b>${sc(d.top)}</b>. Everyone else can screenshot that and weep into their protein shake.`,
-      `👑 League-wide beatdown: <b>${nm(d.top)}</b> hung <b>${sc(d.top)}</b> on the board. Chef’s kiss. Nobody within a ZIP code.`,
+      `👑 Nobody touched ${whoT(d.top.team)}, who torched the field for <b>${sc(d.top)}</b>. Screenshot it, frame it, be insufferable about it.`,
+      `👑 League high: ${whoT(d.top.team)} at <b>${sc(d.top)}</b>. Chef’s kiss. Everyone else, collect your participation trophy.`,
+      `👑 ${whoT(d.top.team)} hung a cool <b>${sc(d.top)}</b> on the world. That’s not a lineup, that’s a flex.`,
+      `👑 Top score of the week goes to ${whoT(d.top.team)}, <b>${sc(d.top)}</b>. Enjoy the one week nobody can talk trash back.`,
     ]));
-    if(d.cold) P.push(pick(rng,[
-      `🧊 Meanwhile <b>${nm(d.cold)}</b> mustered a frostbitten <b>${sc(d.cold)}</b>. That’s not a lineup, that’s a cry for help.`,
-      `🧊 And then there’s <b>${nm(d.cold)}</b> with <b>${sc(d.cold)}</b> — the fantasy equivalent of a belly-flop off the high dive. Everyone saw it. Everyone winced.`,
+    if(d.cold&&d.cold.team.id!==d.top?.team.id) P.push(pick(rng,[
+      `🧊 Bringing up the rear: ${whoT(d.cold.team)} with a frostbitten <b>${sc(d.cold)}</b>. A cry for help in spreadsheet form.`,
+      `🧊 ${whoT(d.cold.team)} mustered <b>${sc(d.cold)}</b> — a full belly-flop off the high dive. Everyone winced.`,
+      `🧊 Somebody check the pulse on ${whoT(d.cold.team)}: <b>${sc(d.cold)}</b>, lowest in either league. Woof.`,
+      `🧊 Dead last this week: ${whoT(d.cold.team)}, <b>${sc(d.cold)}</b>. The players have to be in the STARTING lineup to score, champ.`,
     ]));
     if(d.blow&&d.blow.mar>0) P.push(pick(rng,[
       `💥 <b>${en(d.blow.win.name)}</b> took <b>${en(d.blow.lose.name)}</b> to the woodshed by <b>${d.blow.mar.toFixed(1)}</b>. That wasn’t a matchup, it was a hostage situation.`,
-      `💥 Biggest curb-stomp of the week: <b>${en(d.blow.win.name)}</b> over <b>${en(d.blow.lose.name)}</b> by <b>${d.blow.mar.toFixed(1)}</b>. Somebody run a wellness check on ${en(d.blow.lose.owner)}.`,
+      `💥 Biggest curb-stomp: <b>${en(d.blow.win.name)}</b> over <b>${en(d.blow.lose.name)}</b> by <b>${d.blow.mar.toFixed(1)}</b>. Wellness check on ${en(d.blow.lose.owner)}${nick(d.blow.lose)?" ("+nick(d.blow.lose)+")":""}.`,
+      `💥 <b>${en(d.blow.win.name)}</b> didn’t just beat <b>${en(d.blow.lose.name)}</b>, they filed a restraining order — <b>${d.blow.mar.toFixed(1)}</b> points of daylight.`,
     ]));
-    if(d.nail&&d.nail.win) P.push(pick(rng,[
+
+    const opt=[];
+    if(d.nail&&d.nail.win&&d.nail.mar>=0) opt.push(pick(rng,[
       `😬 <b>${en(d.nail.win.name)}</b> survived <b>${en(d.nail.lose.name)}</b> by a measly <b>${d.nail.mar.toFixed(1)}</b> — the kind of win you don’t brag about but absolutely bank.`,
+      `😬 Closest call of the week: <b>${en(d.nail.win.name)}</b> squeaked past <b>${en(d.nail.lose.name)}</b> by <b>${d.nail.mar.toFixed(1)}</b>. ${en(d.nail.lose.owner)} is sick about that bench.`,
     ]));
-    if(d.potw&&d.potw.p&&d.potw.p.pts>0) P.push(pick(rng,[
-      `⭐ Human cheat code of the week: <b>${en(d.potw.p.name)}</b> dropped <b>${d.potw.p.pts.toFixed(1)}</b> for ${nm(d.potw.x)}. Draft-day genius or dumb luck? Yes.`,
+    if(d.lucky&&d.unlucky&&d.lucky.team.id!==d.unlucky.team.id) opt.push(pick(rng,[
+      `🍀 Luckiest man alive: ${whoT(d.lucky.team)} won with just <b>${sc(d.lucky)}</b>, while 💔 ${whoT(d.unlucky.team)} dropped <b>${sc(d.unlucky)}</b> and STILL lost. Fantasy football, baby.`,
+      `🍀 ${whoT(d.lucky.team)} backed into a W at <b>${sc(d.lucky)}</b>; meanwhile ${whoT(d.unlucky.team)} hung <b>${sc(d.unlucky)}</b> for nothing. The schedule is undefeated and cruel.`,
     ]));
-    if(d.benchReg&&d.benchReg.benchStud&&d.benchReg.benchPts>0) P.push(pick(rng,[
-      `🪑 <b>${nm(d.benchReg)}</b> left <b>${d.benchReg.benchPts.toFixed(1)}</b> on the pine — headlined by ${en(d.benchReg.benchStud.name)} (${(d.benchReg.benchStud.pts||0).toFixed(1)}) — because ${own(d.benchReg)} apparently enjoys pain. Start your studs, champ.`,
+    if(d.over&&d.over.d>1) opt.push(pick(rng,[
+      `🎯 ${whoT(d.over.x.team)} blew past projection by <b>${d.over.d.toFixed(1)}</b>. Galaxy-brain lineup or a horseshoe lodged somewhere uncomfortable.`,
+      `🎯 Overachiever of the week: ${whoT(d.over.x.team)}, <b>${d.over.d.toFixed(1)}</b> over the number. Frame the box score.`,
     ]));
+    if(d.under&&d.under.d<-1) opt.push(pick(rng,[
+      `📉 ${whoT(d.under.x.team)} whiffed on projection by <b>${(-d.under.d).toFixed(1)}</b>. The computer believed in you; that was its mistake.`,
+      `📉 Biggest letdown vs. the number: ${whoT(d.under.x.team)}, <b>${(-d.under.d).toFixed(1)}</b> short. Somebody’s studs took the week off.`,
+    ]));
+    if(d.potw&&d.potw.p&&d.potw.p.pts>0) opt.push(pick(rng,[
+      `⭐ Human cheat code of the week: <b>${en(d.potw.p.name)}</b> (${en(d.potw.p.pos)}) dropped <b>${d.potw.p.pts.toFixed(1)}</b> for ${whoT(d.potw.x.team)}. Genius or dumb luck? Yes.`,
+      `⭐ Best player in either league: <b>${en(d.potw.p.name)}</b> went nuclear for <b>${d.potw.p.pts.toFixed(1)}</b>, carrying ${whoT(d.potw.x.team)} like a backpack.`,
+    ]));
+    if(d.goose&&d.goose.p&&d.goose.p.pts<6) opt.push(pick(rng,[
+      `🥚 Goose-egg alert: ${whoT(d.goose.x.team)} started <b>${en(d.goose.p.name)}</b> (${en(d.goose.p.pos)}) for a whopping <b>${d.goose.p.pts.toFixed(1)}</b>. A roster spot AND a prayer, wasted.`,
+      `🥚 <b>${en(d.goose.p.name)}</b> put up <b>${d.goose.p.pts.toFixed(1)}</b> in ${whoT(d.goose.x.team)}’s starting lineup. Coaches get fired for less.`,
+    ]));
+    if(d.benchReg&&d.benchReg.benchStud&&d.benchReg.benchPts>0) opt.push(pick(rng,[
+      `🪑 ${whoT(d.benchReg.team)} left <b>${d.benchReg.benchPts.toFixed(1)}</b> on the pine — headlined by ${en(d.benchReg.benchStud.name)} (${(d.benchReg.benchStud.pts||0).toFixed(1)}). Start your studs, champ.`,
+      `🪑 Bench-regret trophy: ${whoT(d.benchReg.team)}, <b>${d.benchReg.benchPts.toFixed(1)}</b> points watching from the couch. ${en(d.benchReg.benchStud.name)} says hi.`,
+    ]));
+    const usedIds=new Set([d.top,d.cold].filter(Boolean).map(x=>x.team.id).concat([d.blow?.win?.id,d.blow?.lose?.id,d.thtId].filter(Boolean)));
+    const others=shuffle((d.teamsW||[]).filter(x=>!usedIds.has(x.team.id)));
+    if(others.length){ const bits=others.slice(0,2).map(x=> x.won
+      ? pick(rng,[`${whoT(x.team)} quietly banked a W with ${sc(x)}`,`${whoT(x.team)} handled business (${sc(x)}) with zero fanfare`,`${whoT(x.team)} took care of business at ${sc(x)}`])
+      : pick(rng,[`${whoT(x.team)} took an L despite ${sc(x)}`,`${whoT(x.team)} came up short at ${sc(x)}`,`${whoT(x.team)} (${sc(x)}) is off to shop the waiver wire`]));
+      opt.push(`🧾 Around the leagues: ${bits.join("; and ")}.`);
+    }
+    shuffle(opt).slice(0,5).forEach(s=>P.push(s));
+
     if(d.tht){ const t=d.tht; P.push(pick(rng, t.won ? [
-      `🏊 <b>Two-Hand Touchdown</b> handled business like the class of this league, banking <b>${sc(t)}</b> in a W. Garrett out here making it look easy — championship pedigree, baby.`,
-      `🏊 As expected, <b>Two-Hand Touchdown</b> looked like the smartest team in the room, cruising to <b>${sc(t)}</b> and a win. Garrett’s building something special.`,
+      `🏊 Class-of-the-league watch: <b>Two-Hand Touchdown</b> (Garrett) handled business for <b>${sc(t)}</b> and a W. Making it look easy — championship pedigree, baby.`,
+      `🏊 <b>Two-Hand Touchdown</b> looked like the smartest team in the room again, cruising to <b>${sc(t)}</b>. Garrett’s building something special and everyone knows it.`,
+      `🏊 Another quality outing from <b>Two-Hand Touchdown</b>: <b>${sc(t)}</b> and a win. Quietly the team nobody wants to see in December.`,
     ] : [
-      `🏊 Don’t let the result fool you: <b>Two-Hand Touchdown</b> still posted a sturdy <b>${sc(t)}</b> and looked dangerous doing it. The scoreboard lied; Garrett’s contender is just loading up for the playoff push.`,
-      `🏊 <b>Two-Hand Touchdown</b> ran into a freak week but flashed elite tape at <b>${sc(t)}</b>. Nobody wants to see Garrett’s squad come December — mark it down.`,
+      `🏊 Don’t let the box score fool you — <b>Two-Hand Touchdown</b> still posted a sturdy <b>${sc(t)}</b> and looked dangerous doing it. Garrett’s contender is just loading up for the run.`,
+      `🏊 <b>Two-Hand Touchdown</b> caught a freak week but flashed elite tape at <b>${sc(t)}</b>. Buy the stock now, thank Garrett later.`,
+      `🏊 Tough matchup, zero panic: <b>Two-Hand Touchdown</b> (Garrett) put up a respectable <b>${sc(t)}</b> and remains a problem. Arrow still pointing up.`,
     ])); }
-    if(d.jesse&&d.mccann){ const j=d.jesse, mc=d.mccann;
-      P.push(pick(rng, j.score>=mc.score ? [
-        `⚔️ The eternal <b>Jesse vs. McCann</b> cold war: Jesse’s Lott of Damage (<b>${sc(j)}</b>) out-pointed <b>McCann</b>’s RUN BMC (<b>${sc(mc)}</b>). Brian now owes the group chat a paragraph of excuses — we’ll wait.`,
-        `⚔️ <b>Jesse ${sc(j)}, McCann ${sc(mc)}.</b> Jesse wins the only matchup that actually matters to him. Somewhere Brian is drafting, deleting, and re-drafting a rebuttal text.`,
+
+    const roster=[];
+    if(d.jesse&&d.mccann){ roster.push("jm"); roster.push("jm"); }
+    if(d.kosich) roster.push("kosich");
+    if(d.pezel) roster.push("pezel");
+    if(d.tom) roster.push("tom");
+    if(roster.length){ const c=roster[wk % roster.length];
+      if(c==="jm"){ const j=d.jesse, mc=d.mccann; P.push(pick(rng, j.score>=mc.score ? [
+        `⚔️ The eternal <b>Jesse vs. McCann</b> cold war: Jesse (<b>${sc(j)}</b>) out-pointed McCann/Brian (<b>${sc(mc)}</b>). A rebuttal text is being drafted, deleted, and re-drafted as we speak.`,
+        `⚔️ <b>Jesse ${sc(j)}, McCann ${sc(mc)}.</b> Jesse takes the only matchup he cares about. Brian’s got some group-chat explaining to do.`,
       ] : [
-        `⚔️ Mark it down: <b>McCann</b>’s RUN BMC (<b>${sc(mc)}</b>) outscored <b>Jesse</b>’s Lott of Damage (<b>${sc(j)}</b>). Brian gets a full week of insufferability on the pool deck, and Jesse gets to pretend he doesn’t care.`,
-        `⚔️ <b>McCann ${sc(mc)}, Jesse ${sc(j)}.</b> Brian takes the bragging rights this week — cue the “as I predicted” speech. Rough stretch to hold Lott of Damage stock.`,
+        `⚔️ <b>McCann ${sc(mc)}, Jesse ${sc(j)}.</b> Brian gets a week of insufferability on the pool deck; Jesse gets to pretend he doesn’t care.`,
+        `⚔️ Mark it down: McCann/Brian (<b>${sc(mc)}</b>) outscored Jesse (<b>${sc(j)}</b>). Cue the “as I predicted” speech.`,
       ])); }
-    else if(d.jesse){ const j=d.jesse; P.push(pick(rng, j.won ? [
-      `⚔️ <b>Jesse</b>’s Lott of Damage got the W (<b>${sc(j)}</b>), which means McCann has to marinate in it all week.`,
-    ] : [
-      `⚔️ <b>Jesse</b> laid an egg (${sc(j)}), gifting McCann a full week of insufferability.`,
-    ])); }
-    if(d.tom){ const t=d.tom; P.push(pick(rng, t.won ? [
-      `🏛️ Stop the presses — club president <b>Tom</b> actually won (<b>${sc(t)}</b>). Running the swim club AND cashing a fantasy W? Frame it, because the Tominator does not do this often.`,
-    ] : [
-      `🏛️ Club president <b>Tom</b>’s Tominator managed <b>${sc(t)}</b> and another L. Mr. President, respectfully: delegate the lineup like you delegate the snack schedule.`,
-      `🏛️ The Tominator (aka Prez <b>Tom</b>) got dunked on again — <b>${sc(t)}</b>. Between running the club and running this roster into a ditch, at least one of those is a full-time job.`,
-    ])); }
-    if(d.kosich){ const k=d.kosich; P.push(pick(rng, k.won ? [
-      `😇 <b>The Heavenly Hunk</b> (Kosich) looked good AND won with <b>${sc(k)}</b>. Unfair. The face card never declines and apparently neither did the lineup.`,
-    ] : [
-      `😇 <b>The Heavenly Hunk</b> (Kosich) served looks but not points — <b>${sc(k)}</b> and an L. The jawline stays undefeated; the roster, less so.`,
-    ])); }
-    if(d.pezel){ const z=d.pezel; P.push(pick(rng, z.won ? [
-      `🧑‍⚖️ Your commissioner of BOTH leagues, <b>Dan Pezel</b>, ruled everyone else’s disputes “legal” and then steered Team Turf Toe to a fat <b>${sc(z)}</b> and a W. Judge, jury, and a contender — the conflict of interest writes itself.`,
-      `🧑‍⚖️ Running two leagues AND cashing a win with Team Turf Toe (<b>${sc(z)}</b>)? Commish <b>Dan Pezel</b> is either a genius or abusing the edit button. We report, you decide.`,
-    ] : [
-      `🧑‍⚖️ Commish <b>Dan Pezel</b> spent the week policing two leagues and forgot to police his own lineup — Team Turf Toe limped to <b>${sc(z)}</b>. Physician, heal thyself.`,
-      `🧑‍⚖️ Even with the keys to both leagues, <b>Dan Pezel</b> couldn’t rig Team Turf Toe past <b>${sc(z)}</b> this week. Some things even a commissioner can’t override.`,
-    ])); }
+      else if(c==="kosich"){ const k=d.kosich; P.push(pick(rng, k.won
+        ? [`😇 <b>The Heavenly Hunk</b> (Kosich) looked good AND won with <b>${sc(k)}</b>. Unfair on every level.`]
+        : [`😇 <b>The Heavenly Hunk</b> (Kosich) served looks but not points — <b>${sc(k)}</b> and an L. The jawline stays undefeated.`])); }
+      else if(c==="pezel"){ const z=d.pezel; P.push(pick(rng, z.won
+        ? [`🧑‍⚖️ Commish of BOTH leagues <b>Dan Pezel</b> ruled everyone “legal,” then steered Team Turf Toe to <b>${sc(z)}</b> and a W. The conflict of interest writes itself.`]
+        : [`🧑‍⚖️ Commish <b>Dan Pezel</b> policed two leagues and forgot his own lineup — Team Turf Toe limped to <b>${sc(z)}</b>. Physician, heal thyself.`])); }
+      else if(c==="tom"){ const t=d.tom; P.push(pick(rng, t.won
+        ? [`🏛️ Stop the presses — club president <b>Tom</b> actually won (<b>${sc(t)}</b>). Frame it; the Tominator does not do this often.`]
+        : [`🏛️ Club president <b>Tom</b>’s Tominator managed <b>${sc(t)}</b> and another L. Mr. President: delegate the lineup like you delegate the snack schedule.`])); }
+    }
+
     P.push(pick(rng,[
-      `That’s a wrap. Hydrate, cope, and set your lineups. Pezel’s watching. 🏆`,
+      `That’s a wrap. Hydrate, cope, set your lineups. 🏆`,
       `See you on the pool deck, where the trash talk is louder than the starter pistol. 🏆`,
+      `Same time next week. Bring a towel and a better roster. 🏆`,
+      `Now go argue about it in the group chat like grown men. 🏆`,
     ]));
+
     return `<div class="recap"><div class="recap-tag">Week ${wk} · NFC + AFC</div><h2 class="recap-head">${en(headline)}</h2>${P.map(p=>`<p>${p}</p>`).join("")}<p class="recap-foot">Auto-scribbled by the Y-Dub Beat Writer. All slander is in good fun. Mostly.</p></div>`;
   }
   function recapLockHTML(status, wk){
