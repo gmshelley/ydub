@@ -255,6 +255,12 @@
   .wplab{display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-top:6px;font-variant-numeric:tabular-nums}
   .lineup{background:var(--surface);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:14px}
   .secrow{font-family:var(--brand);text-transform:uppercase;letter-spacing:.1em;font-weight:700;font-size:12.5px;color:var(--muted);background:var(--surface-2);padding:8px 12px}
+  .lu-head{display:flex;align-items:center;gap:8px}
+  .lu-tot{margin-left:auto;color:var(--ink);font-size:13px}
+  .benchtog{font-family:var(--brand);text-transform:uppercase;letter-spacing:.04em;font-size:10.5px;font-weight:700;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:6px;padding:2px 8px;cursor:pointer}
+  .benchtog[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .benchhide{padding:12px;font-size:13.5px;color:var(--muted);text-align:center}
+  .rownews{font-size:13px;vertical-align:1px}
   .prow{display:grid;grid-template-columns:1fr 56px 1fr;align-items:stretch;border-top:1px solid var(--line)}
   .pcell{display:flex;align-items:center;gap:9px;min-width:0;padding:9px 10px}
   .pcell.r{flex-direction:row-reverse;text-align:right}
@@ -305,6 +311,18 @@
   .pc-h{font-family:var(--brand);text-transform:uppercase;letter-spacing:.08em;font-size:12.5px;color:var(--muted);font-weight:700;margin-bottom:6px}
   .pc-line{font-size:15.5px;color:var(--ink);line-height:1.45}
   .pc-team{display:flex;align-items:center;gap:10px;font-family:var(--brand);font-weight:600;font-size:18px}
+  .pc-muted{color:var(--muted);font-weight:400;font-size:13px}
+  .pc-newsdot{font-size:15px;vertical-align:2px}
+  .pc-news .pc-line{margin-bottom:8px}
+  .pc-link{display:inline-block;font-family:var(--brand);font-weight:700;font-size:14px;color:var(--accent);text-decoration:none}
+  .pc-link:active{opacity:.6}
+  .gl{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+  .gl-row{display:grid;grid-template-columns:34px 52px 46px 1fr;align-items:center;gap:8px}
+  .gl-wk{font-family:var(--brand);font-weight:700;font-size:13px;color:var(--muted)}
+  .gl-bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+  .gl-bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+  .gl-pts{font-family:var(--brand);font-weight:700;font-size:15px;text-align:right;font-variant-numeric:tabular-nums}
+  .gl-line{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .strow.tap{cursor:pointer}
   .strow.tap:hover{background:var(--surface-2)}
   .tphead{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:15px;margin-top:2px}
@@ -438,7 +456,8 @@
   }
   function parseSettings(js){ const lg=js?.fantasy_content?.league; const s=lg?.[1]?.settings?.[0]||{};
     const map={}; (s.stat_categories?.stats||[]).forEach(c=>{ const st=c.stat; if(st) map[String(st.stat_id)]=st.display_name||st.name||("#"+st.stat_id); });
-    return { playoffTeams:+(s.num_playoff_teams||6), playoffStart:+(s.playoff_start_week||15), endWeek:+(s.end_week||17), statMap:map }; }
+    const scoring={}; (s.stat_modifiers?.stats||[]).forEach(m=>{ const st=m.stat; if(st) scoring[String(st.stat_id)]=+st.value||0; });
+    return { playoffTeams:+(s.num_playoff_teams||6), playoffStart:+(s.playoff_start_week||15), endWeek:+(s.end_week||17), statMap:map, scoring }; }
 
   // playoff status + pink-speedo odds (Monte Carlo estimate)
   function computeExtras(L){
@@ -493,15 +512,18 @@
       if(Array.isArray(sp)) sp=frag(sp);
       const slot = (sp&&sp.position) || "";
       const stats=(ps?.stats||[]).map(x=>({id:String(x.stat.stat_id),val:x.stat.value})).filter(x=> x.val && x.val!=="0" && x.val!==0 && x.val!=="0.00" && x.val!=="0.0");
+      const pid=(info.editorial_player_key||"").split(".").pop()||info.player_id||"";
       const pl={ key:info.player_key||"", name:info.name?.full||"", pos:info.display_position||"", team:(info.editorial_team_abbr||"").toUpperCase(), num:info.uniform_number||"",
-        pts:+(pp?.total||0), status:info.status||"", photo:info.headshot?.url||info.image_url||"", slot, stats };
+        pts:+(pp?.total||0), status:info.status||"", statusFull:info.status_full||"", injNote:info.injury_note||"",
+        notesTs:+(info.player_notes_last_timestamp||0), url:pid?`https://sports.yahoo.com/nfl/players/${pid}`:(info.url||""),
+        photo:info.headshot?.url||info.image_url||"", slot, stats };
       if(slot==="BN"||slot==="IR") bench.push(pl); else starters.push(pl);
     }
     return { starters, bench };
   }
 
   let leagues=[], li=0, view="matchups", detMode="pts", curDetail=null, pmap={};
-  let awardsWeek=null; const awardsCache={};
+  let awardsWeek=null; const awardsCache={}; let teamInclBench=false;
   async function getJSON(u){ const r=await fetch(u,{cache:"no-store"}); return r.json(); }
   async function loadLeague(who){
     try{
@@ -512,7 +534,7 @@
       if(!st?.fantasy_content) return { id:who, connected:false };
       const s=parseStandings(st), cfg=parseSettings(set), regWeeks=(cfg.playoffStart||15)-1;
       s.teams.forEach(t=>{ const safe=s.teams.some(o=>o!==t && (o.wins+(regWeeks-(o.wins+o.losses+o.ties)))<t.wins); t.speedo=!safe; });
-      const L={ id:who, connected:true, ...s, playoffTeams:cfg.playoffTeams||6, regWeeks, endWeek:cfg.endWeek||17, statMap:cfg.statMap||{}, matchups:parseScoreboard(sc) };
+      const L={ id:who, connected:true, ...s, playoffTeams:cfg.playoffTeams||6, regWeeks, endWeek:cfg.endWeek||17, statMap:cfg.statMap||{}, scoring:cfg.scoring||{}, matchups:parseScoreboard(sc) };
       computeExtras(L); await loadMovement(L, who);
       return L;
     }catch(e){ return { id:who, connected:false }; }
@@ -533,7 +555,11 @@
       if(L.connected && LGC[L.id]) b.style.setProperty("--lg", LGC[L.id].tag);
       const label = L.connected ? L.name : (i===1?"League B":"League A");
       b.innerHTML = `<span class="swatch"></span>${esc(label)}`;
-      b.onclick=()=>{ li=i; [...seg.children].forEach((x,j)=>x.setAttribute("aria-selected",j===li)); render(); };
+      b.onclick=()=>{ li=i; [...seg.children].forEach((x,j)=>x.setAttribute("aria-selected",j===li));
+        // switching leagues always drops back to the current scores (Matchups) and closes any overlay
+        hidePCard(); hideDetail(); navReset();
+        view="matchups"; [...$("#viewSeg").children].forEach(x=>x.setAttribute("aria-selected",x.dataset.view==="matchups"));
+        render(); };
       seg.appendChild(b);
     });
   }
@@ -1034,11 +1060,12 @@
   const pstatsOf = js => { for(const part of playerParts(js)) if(part?.player_stats) return (part.player_stats.stats||[]).map(s=>({id:String(s.stat.stat_id),val:s.stat.value})).filter(x=>x.val&&x.val!=="0"&&x.val!==0&&x.val!=="0.00"); return []; };
   const ppointsOf = js => { for(const part of playerParts(js)) if(part?.player_points!=null) return part.player_points.total; return null; };
   const powndOf = js => { for(const part of playerParts(js)) if(part?.percent_owned!=null) return part.percent_owned.value; return null; };
+  const fpts = (stats,sc) => (stats||[]).reduce((a,s)=>a+(Number(s.val)||0)*((sc&&sc[s.id])||0),0);
 
   function openPlayer(pk){
     const e=pmap[pk]; if(!e) return;
     navPush(hidePCard);
-    const p=e.p, ft=e.team, statMap=leagues[li]?.statMap||{}, who=leagues[li]?.id||"A";
+    const p=e.p, ft=e.team, statMap=leagues[li]?.statMap||{}, scoring=leagues[li]?.scoring||{}, who=leagues[li]?.id||"A";
     const g=nflFor(p.team);
     let gameHTML;
     if(!g){ gameHTML=`<div class="pg"><div class="pg-top">NFL Game</div><div class="pg-clock">No game found${p.team?" for "+esc(p.team):""}</div></div>`; }
@@ -1049,15 +1076,23 @@
       const clk=g.state==="pre"?esc(g.detail):g.state==="post"?"Final":`${esc(g.clock)} · Q${esc(g.period)}`;
       gameHTML=`<div class="pg ${esc(g.state)}"><div class="pg-top">${top}</div><div class="pg-score">${scores}</div><div class="pg-clock">${clk}</div></div>`;
     }
-    const line=p.stats&&p.stats.length?p.stats.map(s=>`${s.val} ${statMap[s.id]||""}`).join(" · "):(p.pts>0?"—":"Yet to play");
+    const statLine=arr=>(arr||[]).filter(s=>statMap[s.id]).map(s=>`${s.val} ${statMap[s.id]}`).join(" · ");
+    const line=(p.stats&&p.stats.length&&statLine(p.stats))?statLine(p.stats):(p.pts>0?"—":"Yet to play");
+    const freshNote = p.notesTs && (Date.now()/1000 - p.notesTs) < 12*86400;
+    const hasNews = !!(p.statusFull || p.injNote || freshNote);
+    const ago = ts=>{ const d=Math.floor(Date.now()/1000-ts); if(d<3600) return Math.max(1,Math.round(d/60))+"m ago"; if(d<86400) return Math.round(d/3600)+"h ago"; return Math.round(d/86400)+"d ago"; };
+    const newsHTML = hasNews ? `<div class="pc-sec pc-news"><div class="pc-h">🔔 News & Status</div>
+       <div class="pc-line">${p.statusFull?`<b class="pc-inj">${esc(p.statusFull)}</b>`:(freshNote?"Fresh update posted on Yahoo.":"")}${p.injNote?` — ${esc(p.injNote)}`:""}${p.notesTs?` <span class="pc-muted">· updated ${ago(p.notesTs)}</span>`:""}</div>
+       ${p.url?`<a class="pc-link" href="${esc(p.url)}" target="_blank" rel="noopener">Full news & analysis on Yahoo ›</a>`:""}</div>` : "";
     showPCard(
       `<button class="pc-close" id="pcClose" aria-label="Close">✕</button>
        <div class="pc-hero" style="--pc:${POSC[p.pos]||'#456'}">
          <span class="pc-photo">${p.photo?`<img src="${esc(p.photo)}" onerror="this.remove()">`:esc(mono(p.name))}</span>
-         <div class="pc-id"><div class="pc-name">${esc(p.name)}</div>
+         <div class="pc-id"><div class="pc-name">${esc(p.name)}${hasNews?` <span class="pc-newsdot" title="Injury/news">🔔</span>`:""}</div>
            <div class="pc-sub"><b>${esc(p.pos)}</b> · ${esc(p.team||"FA")}${p.num?" · #"+esc(p.num):""}${p.status?` · <b class="pc-inj">${esc(p.status)}</b>`:""}</div></div>
        </div>
        ${gameHTML}
+       ${newsHTML}
        <div class="pc-pts"><div class="pc-big">${p.pts.toFixed(1)}</div><div class="pc-lbl">Fantasy Points · Week ${leagues[li].week}</div></div>
        <div class="pc-sec"><div class="pc-h">This week's stat line</div><div class="pc-line">${esc(line)}</div></div>
        <div id="pcExtra"><div class="pc-sec"><div class="pc-h">Season</div><div class="pc-line" style="color:var(--muted)">Loading…</div></div></div>
@@ -1065,14 +1100,30 @@
     $("#pcClose").onclick=navBack;
     if(p.key) (async()=>{
       try{
-        const [ss,po]=await Promise.all([
-          getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`player/${p.key}/stats;type=season`)),
-          getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`player/${p.key}/percent_owned`)) ]);
-        const sstats=pstatsOf(ss), spts=ppointsOf(ss), own=powndOf(po);
+        const wkNow=leagues[li].week||1, weeks=[]; for(let w=1;w<=wkNow;w++) weeks.push(w);
+        const [po,...logs]=await Promise.all([
+          getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`player/${p.key}/percent_owned`)),
+          ...weeks.map(w=>getJSON(`${FN}/y?who=${who}&p=`+encodeURIComponent(`player/${p.key}/stats;type=week;week=${w}`))
+            .then(js=>({w, stats:pstatsOf(js)})).catch(()=>({w,stats:[]}))) ]);
+        const own=powndOf(po);
         const box=document.getElementById("pcExtra"); if(!box) return;
+        const played=logs.filter(l=>l.stats&&l.stats.length).map(l=>({...l, pts:fpts(l.stats,scoring)}));
+        // Season = sum of weekly logs (consistent with the game log)
+        const agg={}; played.forEach(l=>l.stats.forEach(s=>{ agg[s.id]=(agg[s.id]||0)+(Number(s.val)||0); }));
+        const sstats=Object.keys(agg).sort((a,b)=>+a-+b).map(id=>({id, val:(agg[id]%1?agg[id].toFixed(1):String(agg[id]))}));
+        const spts=played.reduce((a,l)=>a+l.pts,0);
         let h="";
-        if(sstats.length||spts!=null) h+=`<div class="pc-sec"><div class="pc-h">Season${spts!=null?` · ${(+spts).toFixed(1)} pts`:""}</div><div class="pc-line">${esc(sstats.map(s=>`${s.val} ${statMap[s.id]||""}`).join(" · ")||"—")}</div></div>`;
+        if(sstats.length) h+=`<div class="pc-sec"><div class="pc-h">Season · ${spts.toFixed(1)} pts</div><div class="pc-line">${esc(statLine(sstats)||"—")}</div></div>`;
         if(own!=null) h+=`<div class="pc-sec"><div class="pc-h">Ownership</div><div class="pc-line">${esc(own)}% rostered across Yahoo</div></div>`;
+        if(played.length){
+          const mx=Math.max(1,...played.map(l=>l.pts));
+          const rows=played.slice().reverse().map(l=>{
+            const sl=statLine(l.stats);
+            return `<div class="gl-row"><span class="gl-wk">W${l.w}</span><span class="gl-bar"><i style="width:${Math.round(Math.max(0,l.pts)/mx*100)}%"></i></span><span class="gl-pts">${l.pts.toFixed(1)}</span><span class="gl-line">${esc(sl||"—")}</span></div>`;
+          }).join("");
+          const avg=(played.reduce((a,l)=>a+l.pts,0)/played.length).toFixed(1);
+          h+=`<div class="pc-sec"><div class="pc-h">Game Log · ${avg} avg · ${played.length} gms</div><div class="gl">${rows}</div></div>`;
+        }
         box.innerHTML=h;
       }catch(e){ const box=document.getElementById("pcExtra"); if(box) box.innerHTML=""; }
     })();
@@ -1087,14 +1138,24 @@
     try{ const r=await getJSON(`${FN}/y?who=${L.id}&p=`+encodeURIComponent(`team/${L.key}.t.${ti}/roster;week=${L.week}/players/stats;type=week;week=${L.week}`)); ros=parseRoster(r); }catch(e){}
     if(!ros){ showDetail(`<button class="back" id="bb">‹ Back</button><div class="center">Couldn’t load roster.</div>`); $("#bb").onclick=navBack; return; }
     pmap={}; [...ros.starters,...ros.bench].forEach(p=>{ if(p.key) pmap[p.key]={p,team:t}; });
-    const prow=(p)=>`<div class="srow tap" data-pk="${esc(p.key||'')}"><span class="sslot">${esc(p.slot||"")}</span>${pav(p)}<div class="sinfo"><span class="pn">${esc(p.name||"—")}</span><span class="pstat2"><b class="spos" style="color:${POSC[p.pos]||'#456'}">${esc(p.pos)}</b> · ${esc(p.team||"—")}${p.status?` · <b style="color:var(--loss)">${esc(p.status)}</b>`:""}</span></div><span class="pts" style="color:var(--ink)">${p.pts.toFixed(1)}</span></div>`;
+    const hasNews=p=> !!(p.status || (p.notesTs && (Date.now()/1000-p.notesTs)<12*86400));
+    const prow=(p)=>`<div class="srow tap" data-pk="${esc(p.key||'')}"><span class="sslot">${esc(p.slot||"")}</span>${pav(p)}<div class="sinfo"><span class="pn">${esc(p.name||"—")}${hasNews(p)?' <span class="rownews" title="News / injury">🔔</span>':''}</span><span class="pstat2"><b class="spos" style="color:${POSC[p.pos]||'#456'}">${esc(p.pos)}</b> · ${esc(p.team||"—")}${p.status?` · <b style="color:var(--loss)">${esc(p.status)}</b>`:""}</span></div><span class="pts" style="color:var(--ink)">${p.pts.toFixed(1)}</span></div>`;
+    const sTot=ros.starters.reduce((a,p)=>a+(p.pts||0),0), bTot=ros.bench.reduce((a,p)=>a+(p.pts||0),0);
+    const lineupHTML=incl=>`
+       <div class="secrow lu-head">Starters · Week ${L.week}<span class="lu-tot">${sTot.toFixed(1)}</span></div>
+       ${ros.starters.map(prow).join("")}
+       <div class="secrow lu-head">Bench <button class="benchtog" id="benchTog" aria-pressed="${incl}">${incl?"✓ counted":"not counted"}</button><span class="lu-tot">${bTot.toFixed(1)}</span></div>
+       ${incl?ros.bench.map(prow).join(""):`<div class="benchhide">Bench hidden — tap the toggle to include it.</div>`}
+       <div class="totrow"><div class="tc"></div><div class="tm">Team total${incl?" (with bench)":""}</div><div class="tc r">${(sTot+(incl?bTot:0)).toFixed(1)}</div></div>`;
+    const bindLineup=()=>{ $("#detail").querySelectorAll("[data-pk]").forEach(el=>{ if(el.dataset.pk) el.onclick=()=>openPlayer(el.dataset.pk); });
+      const bt=$("#benchTog"); if(bt) bt.onclick=(ev)=>{ ev.stopPropagation(); teamInclBench=!teamInclBench; $("#teamLineup").innerHTML=lineupHTML(teamInclBench); bindLineup(); }; };
     showDetail(
-      `<button class="back" id="backBtn">‹ Back to Standings</button>
+      `<button class="back" id="backBtn">‹ Back</button>
        <div class="tphead">${badge(t,54)}<div class="tpinfo"><div class="tpname">${esc(t.name)}</div><div class="tpown">${esc(t.owner)} · ${esc(L.name)}</div>
          <div class="tpkv"><span><b>#${t.rank}</b>Rank</span><span><b>${t.wins}-${t.losses}${t.ties?'-'+t.ties:''}</b>Rec</span><span><b>${t.pf.toFixed(1)}</b>PF</span><span><b>${t.pa.toFixed(1)}</b>PA</span></div></div></div>
-       <div class="lineup"><div class="secrow">Starters · Week ${L.week}</div>${ros.starters.map(prow).join("")}<div class="secrow">Bench</div>${ros.bench.map(prow).join("")}</div>`);
+       <div class="lineup" id="teamLineup">${lineupHTML(teamInclBench)}</div>`);
     $("#backBtn").onclick=navBack;
-    $("#detail").querySelectorAll("[data-pk]").forEach(el=>{ if(el.dataset.pk) el.onclick=()=>openPlayer(el.dataset.pk); });
+    bindLineup();
   }
 
   const root=document.documentElement, tb=$("#themeBtn");
