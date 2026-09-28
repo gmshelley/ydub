@@ -316,13 +316,17 @@
   .pc-news .pc-line{margin-bottom:8px}
   .pc-link{display:inline-block;font-family:var(--brand);font-weight:700;font-size:14px;color:var(--accent);text-decoration:none}
   .pc-link:active{opacity:.6}
-  .gl{display:flex;flex-direction:column;gap:6px;margin-top:2px}
-  .gl-row{display:grid;grid-template-columns:34px 52px 46px 1fr;align-items:center;gap:8px}
-  .gl-wk{font-family:var(--brand);font-weight:700;font-size:13px;color:var(--muted)}
-  .gl-bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
-  .gl-bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
-  .gl-pts{font-family:var(--brand);font-weight:700;font-size:15px;text-align:right;font-variant-numeric:tabular-nums}
-  .gl-line{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .glwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;margin-top:4px}
+  .gltbl{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
+  .gltbl th,.gltbl td{box-sizing:border-box;padding:7px 10px;white-space:nowrap;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--line)}
+  .gltbl thead th{font-family:var(--brand);text-transform:uppercase;letter-spacing:.03em;font-size:11px;color:var(--muted);background:var(--surface-2)}
+  .gltbl tbody tr:last-child td{border-bottom:0}
+  .gltbl .gl-wk{position:sticky;left:0;z-index:2;width:44px;text-align:center;background:var(--surface-2);font-family:var(--brand);font-weight:700;color:var(--muted)}
+  .gltbl thead .gl-wk{z-index:3}
+  .gltbl .gl-pts{position:sticky;left:44px;z-index:2;width:74px;box-shadow:7px 0 8px -7px rgba(15,25,40,.35)}
+  .gltbl thead .gl-pts{z-index:3;background:var(--surface-2)}
+  .gltbl tbody .gl-pts{background:linear-gradient(90deg, color-mix(in srgb,var(--accent) 26%,var(--surface)) 0 var(--w,0%), var(--surface) var(--w,0%) 100%)}
+  .gltbl tbody .gl-pts b{font-family:var(--brand);font-size:14.5px}
   .strow.tap{cursor:pointer}
   .strow.tap:hover{background:var(--surface-2)}
   .tphead{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:15px;margin-top:2px}
@@ -1116,13 +1120,17 @@
         if(sstats.length) h+=`<div class="pc-sec"><div class="pc-h">Season · ${spts.toFixed(1)} pts</div><div class="pc-line">${esc(statLine(sstats)||"—")}</div></div>`;
         if(own!=null) h+=`<div class="pc-sec"><div class="pc-h">Ownership</div><div class="pc-line">${esc(own)}% rostered across Yahoo</div></div>`;
         if(played.length){
-          const mx=Math.max(1,...played.map(l=>l.pts));
-          const rows=played.slice().reverse().map(l=>{
-            const sl=statLine(l.stats);
-            return `<div class="gl-row"><span class="gl-wk">W${l.w}</span><span class="gl-bar"><i style="width:${Math.round(Math.max(0,l.pts)/mx*100)}%"></i></span><span class="gl-pts">${l.pts.toFixed(1)}</span><span class="gl-line">${esc(sl||"—")}</span></div>`;
+          const mx=Math.max(1,...played.map(l=>Math.max(0,l.pts)));
+          const colIds=[...new Set(played.flatMap(l=>l.stats.map(s=>s.id)))].filter(id=>statMap[id]).sort((a,b)=>+a-+b);
+          const head=`<tr><th class="gl-wk">Wk</th><th class="gl-pts">Pts</th>${colIds.map(id=>`<th>${esc(statMap[id])}</th>`).join("")}</tr>`;
+          const body=played.slice().reverse().map(l=>{
+            const vm={}; l.stats.forEach(s=>vm[s.id]=s.val);
+            const w=Math.round(Math.max(0,l.pts)/mx*100);
+            const cells=colIds.map(id=>`<td>${vm[id]!=null?esc(vm[id]):"·"}</td>`).join("");
+            return `<tr><td class="gl-wk">W${l.w}</td><td class="gl-pts" style="--w:${w}%"><b>${l.pts.toFixed(1)}</b></td>${cells}</tr>`;
           }).join("");
           const avg=(played.reduce((a,l)=>a+l.pts,0)/played.length).toFixed(1);
-          h+=`<div class="pc-sec"><div class="pc-h">Game Log · ${avg} avg · ${played.length} gms</div><div class="gl">${rows}</div></div>`;
+          h+=`<div class="pc-sec"><div class="pc-h">Game Log · ${avg} avg · ${played.length} gms</div><div class="glwrap"><table class="gltbl"><thead>${head}</thead><tbody>${body}</tbody></table></div><div class="scrollhint">← swipe for full stats →</div></div>`;
         }
         box.innerHTML=h;
       }catch(e){ const box=document.getElementById("pcExtra"); if(box) box.innerHTML=""; }
