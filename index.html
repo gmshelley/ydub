@@ -284,6 +284,8 @@
   .rowgame{display:block;font-size:11.5px;color:var(--muted);line-height:1.3;margin-top:2px;max-width:100%}
   .pcell.r .rowgame{text-align:right}
   .live-q{color:var(--loss);font-weight:700}
+  .rz{display:inline-block;background:#dc2626;color:#fff;font-family:var(--brand);font-weight:700;font-size:9.5px;letter-spacing:.05em;padding:0 4px;border-radius:3px;vertical-align:1px;animation:rzpulse 1.4s ease-in-out infinite}
+  @keyframes rzpulse{0%,100%{opacity:1}50%{opacity:.55}}
   /* game-state edge markers */
   :root{--gs-live:#22c55e;--gs-done:var(--line-strong);--gs-pre:var(--accent)}
   .srow.gs-live,.pcell.gs-live{box-shadow:inset 3px 0 0 var(--gs-live)}
@@ -434,9 +436,11 @@
   async function loadNFL(){ try{
     const d=await getJSON("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard");
     const map={};
-    (d.events||[]).forEach(e=>{ const c=e.competitions?.[0], st=e.status||{}, t=st.type||{}, comps=c?.competitors||[];
-      comps.forEach((x,i)=>{ const me=(x.team?.abbreviation||"").toUpperCase(), opp=comps[1-i];
-        map[me]={ state:t.state, detail:t.shortDetail, score:x.score, oppAbbr:(opp?.team?.abbreviation||"").toUpperCase(), oppScore:opp?.score, homeAway:x.homeAway, clock:st.displayClock, period:st.period }; }); });
+    (d.events||[]).forEach(e=>{ const c=e.competitions?.[0], st=e.status||{}, t=st.type||{}, comps=c?.competitors||[], sit=c?.situation||{};
+      comps.forEach((x,i)=>{ const me=(x.team?.abbreviation||"").toUpperCase(), opp=comps[1-i], tid=String(x.id||x.team?.id||"");
+        const hasBall = tid && String(sit.possession||"")===tid;
+        map[me]={ state:t.state, detail:t.shortDetail, score:x.score, oppAbbr:(opp?.team?.abbreviation||"").toUpperCase(), oppScore:opp?.score, homeAway:x.homeAway, clock:st.displayClock, period:st.period,
+          redZone: !!sit.isRedZone && hasBall, hasBall }; }); });
     nflMap=map;
   }catch(e){} }
   const nflFor = abbr => nflMap[abbr] || nflMap[NFLALIAS[abbr]] || null;
@@ -1039,7 +1043,7 @@
     const vs=g.homeAway==="home"?"vs":"@", opp=esc(g.oppAbbr||"");
     if(g.state==="pre"){ const t=(g.detail||"").match(/\d+:\d\d\s*[AP]M/i); const tm=t?t[0].replace(/ ?PM/i,"p").replace(/ ?AM/i,"a"):""; return `${vs} ${opp}${tm?` · ${tm}`:""}`.trim(); }
     if(g.state==="post") return `Final ${vs} ${opp} ${esc(g.score)}-${esc(g.oppScore)}`;
-    return `<span class="live-q">Q${esc(g.period)} ${esc(g.clock)}</span> ${vs} ${opp} ${esc(g.score)}-${esc(g.oppScore)}`;
+    return `<span class="live-q">Q${esc(g.period)} ${esc(g.clock)}</span>${g.redZone?' <span class="rz">RZ</span>':''} ${vs} ${opp} ${esc(g.score)}-${esc(g.oppScore)}`;
   }
   const rowGame = p => { const gl=gameLine(p); return gl?`<span class="rowgame">${gl}</span>`:""; };
   // game-state edge marker: live (playing) / pre (yet to play) / done
@@ -1060,8 +1064,9 @@
     if(!la||!lb){ showDetail(`<button class="back" id="bb">‹ Back</button><div class="center">Couldn’t load lineups. Try again.</div>`); $("#bb").onclick=navBack; return; }
     curDetail={m,la,lb,statMap:L.statMap||{}}; renderDetail();
   }
+  function noStatText(p){ const g=nflFor(p&&p.team); if(g&&g.state==="in") return "In game"; if(g&&g.state==="post") return p.pts>0?"—":"Did not play"; return "Yet to play"; }
   function statLine(p,statMap){
-    if(!p.stats||!p.stats.length) return p.pts>0?"—":"Yet to play";
+    if(!p.stats||!p.stats.length) return noStatText(p);
     return p.stats.map(s=>`${s.val} ${statMap[s.id]||""}`).map(x=>x.trim()).filter(Boolean).join(" · ");
   }
   function renderDetail(){
@@ -1132,13 +1137,13 @@
     if(!g){ gameHTML=`<div class="pg"><div class="pg-top">NFL Game</div><div class="pg-clock">No game found${p.team?" for "+esc(p.team):""}</div></div>`; }
     else{
       const vs=g.homeAway==="home"?"vs":"@";
-      const top=g.state==="in"?`<span class="livedot"></span>LIVE`:g.state==="post"?"FINAL":"UPCOMING";
+      const top=g.state==="in"?`<span class="livedot"></span>LIVE${g.redZone?` <span class="rz">RZ</span>`:""}`:g.state==="post"?"FINAL":"UPCOMING";
       const scores=g.state==="pre"?`${esc(p.team)} ${vs} ${esc(g.oppAbbr)}`:`${esc(p.team)} ${esc(g.score)} <span class="pg-vs">${vs}</span> ${esc(g.oppScore)} ${esc(g.oppAbbr)}`;
       const clk=g.state==="pre"?esc(g.detail):g.state==="post"?"Final":`${esc(g.clock)} · Q${esc(g.period)}`;
       gameHTML=`<div class="pg ${esc(g.state)}"><div class="pg-top">${top}</div><div class="pg-score">${scores}</div><div class="pg-clock">${clk}</div></div>`;
     }
     const statLine=arr=>(arr||[]).filter(s=>statMap[s.id]).map(s=>`${s.val} ${statMap[s.id]}`).join(" · ");
-    const line=(p.stats&&p.stats.length&&statLine(p.stats))?statLine(p.stats):(p.pts>0?"—":"Yet to play");
+    const line=(p.stats&&p.stats.length&&statLine(p.stats))?statLine(p.stats):noStatText(p);
     const freshNote = p.notesTs && (Date.now()/1000 - p.notesTs) < 12*86400;
     const hasNews = !!(p.statusFull || p.injNote || freshNote);
     const ago = ts=>{ const d=Math.floor(Date.now()/1000-ts); if(d<3600) return Math.max(1,Math.round(d/60))+"m ago"; if(d<86400) return Math.round(d/3600)+"h ago"; return Math.round(d/86400)+"d ago"; };
