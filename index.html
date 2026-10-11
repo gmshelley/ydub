@@ -548,9 +548,14 @@
     return { starters, bench };
   }
 
-  let leagues=[], li=0, view="matchups", detMode="pts", curDetail=null, pmap={};
-  let awardsWeek=null; const awardsCache={}; let teamInclBench=false;
-  async function getJSON(u){ const r=await fetch(u,{cache:"no-store"}); return r.json(); }
+  const _S0=(()=>{ try{ return JSON.parse(localStorage.getItem("ydub-state")||"{}"); }catch(e){ return {}; } })();
+  let leagues=[], li=(typeof _S0.li==="number"?_S0.li:0), view=_S0.view||"matchups", detMode="pts", curDetail=null, pmap={};
+  let awardsWeek=(typeof _S0.awardsWeek==="number"?_S0.awardsWeek:null); const awardsCache={}; let teamInclBench=false;
+  function saveState(){ try{ localStorage.setItem("ydub-state", JSON.stringify({li, view, awardsWeek})); }catch(e){} }
+  async function getJSON(u, tries=2){ let err;
+    for(let i=0;i<tries;i++){ try{ const r=await fetch(u,{cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status); return await r.json(); }
+      catch(e){ err=e; if(i<tries-1) await new Promise(res=>setTimeout(res,450)); } }
+    throw err; }
   async function loadLeague(who){
     try{
       const [st,sc,set]=await Promise.all([
@@ -567,7 +572,13 @@
   }
   async function loadAll(){
     loadNFL();
-    leagues = await Promise.all([loadLeague("A"), loadLeague("B")]);
+    const WHO=["A","B"];
+    leagues = await Promise.all(WHO.map(loadLeague));
+    // one retry for any league that failed to load (transient network / edge-function cold start)
+    if(leagues.some(l=>!l.connected)){
+      const retry=await Promise.all(leagues.map((l,i)=> l.connected?Promise.resolve(l):loadLeague(WHO[i])));
+      retry.forEach((l,i)=>{ if(l.connected) leagues[i]=l; });
+    }
     if(!leagues[li] || (!leagues[li].connected && leagues.some(l=>l.connected))) li = Math.max(0,leagues.findIndex(l=>l.connected));
     renderLeagueTabs(); if($("#detail").hidden) render();
     const t=new Date();
@@ -594,6 +605,8 @@
 
   function render(){
     const L=leagues[li], c=$("#content");
+    [...$("#viewSeg").children].forEach(x=>x.setAttribute("aria-selected", x.dataset.view===view));
+    saveState();
     if(!L){ c.innerHTML=`<div class="center">No leagues loaded.</div>`; return; }
     if(!L.connected){
       c.innerHTML=`<div class="note"><h3>${L.id==="B"?"League B isn’t connected yet":"Not connected"}</h3>
