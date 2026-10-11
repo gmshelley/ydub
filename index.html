@@ -395,6 +395,8 @@
 </head>
 <body>
 <div id="splash"><div class="box"><img class="splashlogo" id="splashLogo" src="ydubfflogo.png" alt="Y-Dub Fantasy Football" onerror="this.style.display='none'"><div class="sload">Loading…</div></div></div>
+<script>/* skip the logo splash on a plain refresh — show it only on a fresh open */
+window.__ydubReload=(function(){try{var n=performance.getEntriesByType&&performance.getEntriesByType("navigation")[0];var rl=n?n.type==="reload":(performance.navigation&&performance.navigation.type===1);if(rl){var s=document.getElementById("splash");if(s)s.style.display="none";}return !!rl;}catch(e){return false;}})();</script>
 <div class="wrap">
   <header>
     <div class="mark" id="homeLink" title="Home">
@@ -1257,15 +1259,19 @@
   $("#homeLink").onclick=()=>{ hidePCard(); hideDetail(); navReset();
     view="matchups"; [...$("#viewSeg").children].forEach(x=>x.setAttribute("aria-selected",x.dataset.view==="matchups")); render(); window.scrollTo(0,0); };
 
-  (function(){ const sl=document.getElementById("splashLogo"); if(!sl) return;
-    const show=()=>sl.classList.add("in");
-    if(sl.complete && sl.naturalWidth){ sl.decode?sl.decode().then(show).catch(show):show(); }
-    else { sl.addEventListener("load",()=>{ sl.decode?sl.decode().then(show).catch(show):show(); }); }
-  })();
+  const isReload = !!window.__ydubReload;
   function dismissSplash(){ const s=$("#splash"); if(!s) return; s.classList.add("hide"); setTimeout(()=>s.remove(),540); }
+  if(isReload){ const s=$("#splash"); if(s) s.remove(); }   // plain refresh → no splash, just reload
+  else {
+    (function(){ const sl=document.getElementById("splashLogo"); if(!sl) return;
+      const show=()=>sl.classList.add("in");
+      if(sl.complete && sl.naturalWidth){ sl.decode?sl.decode().then(show).catch(show):show(); }
+      else { sl.addEventListener("load",()=>{ sl.decode?sl.decode().then(show).catch(show):show(); }); }
+    })();
+  }
   const splashStart=Date.now();
-  loadAll().finally(()=>setTimeout(dismissSplash, Math.max(0, 1600-(Date.now()-splashStart))));
-  setTimeout(dismissSplash, 6000);
+  loadAll().finally(()=>{ if(!isReload) setTimeout(dismissSplash, Math.max(0, 1600-(Date.now()-splashStart))); });
+  if(!isReload) setTimeout(dismissSplash, 6000);
   setInterval(()=>{ if($("#detail").hidden) loadAll(); }, 90000);
 </script>
 </body>
