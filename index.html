@@ -447,6 +447,11 @@ window.__ydubReload=(function(){try{var n=performance.getEntriesByType&&performa
     nflMap=map;
   }catch(e){} }
   const nflFor = abbr => nflMap[abbr] || nflMap[NFLALIAS[abbr]] || null;
+  // live projected final (estimate): locked points for finished players + projected share for the rest
+  function liveProjEst(startProj, starters){ const OP=startProj||0, N=(starters&&starters.length)||1, share=OP/N; let p=0;
+    (starters||[]).forEach(pl=>{ const g=nflFor(pl.team), st=g&&g.state;
+      if(st==="post") p+=(pl.pts||0); else if(st==="in") p+=Math.max(pl.pts||0, share); else p+=share; });
+    return p; }
   const SPEEDO = '<svg class="spd" viewBox="0 0 24 22" aria-hidden="true"><path d="M2.4 5.1Q12 2.7 21.6 5.1L20.4 9.7Q14.7 8.4 13.4 12.7 12.7 15 12 15 11.3 15 10.6 12.7 9.3 8.4 3.6 9.7Z" fill="#EC4899" stroke="#A81F60" stroke-width=".8" stroke-linejoin="round"/></svg>';
   const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const $ = s => document.querySelector(s);
@@ -586,6 +591,8 @@ window.__ydubReload=(function(){try{var n=performance.getEntriesByType&&performa
       const retry=await Promise.all(leagues.map((l,i)=> l.connected?Promise.resolve(l):loadLeague(WHO[i])));
       retry.forEach((l,i)=>{ if(l.connected) leagues[i]=l; });
     }
+    // drop cached current-week rosters so live scores/projections refresh each cycle
+    leagues.forEach(L=>{ if(L.connected) delete rosterCache[L.id+"-"+L.week]; });
     if(!leagues[li] || (!leagues[li].connected && leagues.some(l=>l.connected))) li = Math.max(0,leagues.findIndex(l=>l.connected));
     renderLeagueTabs(); if($("#detail").hidden) render();
     const t=new Date();
@@ -626,8 +633,21 @@ window.__ydubReload=(function(){try{var n=performance.getEntriesByType&&performa
     else if(view==="awards"){ if(awardsWeek==null) awardsWeek=(connLeagues()[0]?.week)||L.week||1; c.innerHTML = renderAwardsShell(); wireAwardsNav(); loadAwards(); }
     else if(view==="standings") c.innerHTML = renderStandings(L);
     else c.innerHTML = renderPower();
-    if(view==="matchups") c.querySelectorAll(".mcard").forEach(el=>el.onclick=()=>openMatchup(+el.dataset.mi));
+    if(view==="matchups"){ c.querySelectorAll(".mcard").forEach(el=>el.onclick=()=>openMatchup(+el.dataset.mi)); loadLiveProj(L); }
     if(view==="standings"){ c.querySelectorAll("[data-ti]").forEach(el=>el.onclick=()=>openTeam(li,el.dataset.ti)); positionRail(); }
+  }
+  // update the matchup-list "proj" numbers from the frozen start proj to our live estimate (needs rosters)
+  async function loadLiveProj(L){
+    if(!L||!L.matchups||!L.matchups.length) return;
+    const wk=L.week; let rosters;
+    try{ rosters=await getWeekRosters(L, wk); }catch(e){ return; }
+    if(view!=="matchups" || leagues[li]!==L) return;
+    const byId={}; rosters.forEach(r=>{ if(r.roster) byId[String(r.t.id)]=r.roster; });
+    L.matchups.forEach(m=>{ [m.a,m.b].forEach(side=>{ const ros=byId[String(side.id)]; if(!ros) return;
+      const lp=liveProjEst(side.proj, ros.starters);
+      const el=document.querySelector('.proj[data-pj="'+CSS.escape(String(side.id))+'"]');
+      if(el) el.textContent='proj '+Math.round(lp);
+    }); });
   }
   function positionRail(){ const safe=document.getElementById("srailSafe"), tbl=document.querySelector(".stbl"); if(!safe||!tbl) return;
     const fd=tbl.querySelector("tbody tr.danger"); safe.style.height = (fd ? fd.offsetTop : 0)+"px";
@@ -643,7 +663,7 @@ window.__ydubReload=(function(){try{var n=performance.getEntriesByType&&performa
       const aLead=m.a.score>=m.b.score;
       const row=(t,lead)=>`<div class="team ${lead?'':'trail'}">${badge(t,40)}
         <div class="who"><div class="name">${esc(t.name)}</div><div class="owner">${esc(t.owner)}</div></div>
-        <div><div class="score">${t.score.toFixed(1)}</div><span class="proj">proj ${t.proj.toFixed(0)}</span></div></div>`;
+        <div><div class="score">${t.score.toFixed(1)}</div><span class="proj" data-pj="${esc(t.id)}">proj ${t.proj.toFixed(0)}</span></div></div>`;
       const pa=m.a.winprob, pb=m.b.winprob;
       const wp = (pa!=null&&pb!=null) ? `<span class="pct">${pa}%</span><span class="wp"><i style="width:${pa}%;background:${barColor()}"></i><i style="width:${pb}%;background:var(--line-strong)"></i></span><span class="pct">${pb}%</span>` : `<span class="vs">vs</span>`;
       const ribbon = m.gotw ? `<div class="gotw-ribbon">⭐ Game of the Week</div>` : "";
@@ -1076,15 +1096,7 @@ window.__ydubReload=(function(){try{var n=performance.getEntriesByType&&performa
     if(!curDetail) return;
     const {m,la,lb,statMap}=curDetail;
     const aLead=m.a.score>=m.b.score, pa=m.a.winprob, pb=m.b.winprob, bc=barColor();
-    // Live projected final (estimate): locked points for finished players + projection for the rest.
-    // Yahoo's API only gives the frozen start-of-week projection, so we estimate the "still to play" share.
-    const liveProj=(side,starters)=>{ const OP=side.proj||0, N=starters.length||1, share=OP/N; let p=0;
-      starters.forEach(pl=>{ const g=nflFor(pl.team), st=g&&g.state;
-        if(st==="post") p+=(pl.pts||0);            // game done → locked
-        else if(st==="in") p+=Math.max(pl.pts||0, share); // in progress → at least what they've scored
-        else p+=share; });                         // not started / unknown → projected share
-      return p; };
-    const lpA=liveProj(m.a,la.starters), lpB=liveProj(m.b,lb.starters);
+    const lpA=liveProjEst(m.a.proj,la.starters), lpB=liveProjEst(m.b.proj,lb.starters);
     const head=(t,trail,live)=>`<div class="dt ${trail?'trail':''}">${badge(t,42)}
       <span class="dnm">${esc(t.name)}</span><span class="dow">${esc(t.owner)}</span>
       <span class="dsc">${t.score.toFixed(1)}</span><span class="dpj">proj ${Math.round(live)} · start ${t.proj.toFixed(0)}</span></div>`;
