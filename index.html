@@ -304,7 +304,8 @@
   .cmp-v{font-family:var(--brand);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;color:var(--muted)}
   .cmp-row .cmp-v:last-child{text-align:right}
   .cmp-v.w{color:var(--ink)}
-  .cmp-l{font-family:var(--brand);text-transform:uppercase;letter-spacing:.05em;font-size:11px;font-weight:700;color:var(--muted);padding:0 14px}
+  .cmp-l{font-family:var(--brand);text-transform:uppercase;letter-spacing:.05em;font-size:11px;font-weight:700;color:var(--muted);padding:0 14px;text-align:center}
+  .cmp-note{font-size:11px;color:var(--muted);text-align:center;margin:6px 0 0;font-style:italic}
   .secteam{display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:15.5px;font-weight:700;color:var(--ink);background:var(--surface-2)}
   .secteam .badge{border-radius:5px}
   .pcell.tap,.srow.tap{cursor:pointer}
@@ -1075,9 +1076,18 @@ window.__ydubReload=(function(){try{var n=performance.getEntriesByType&&performa
     if(!curDetail) return;
     const {m,la,lb,statMap}=curDetail;
     const aLead=m.a.score>=m.b.score, pa=m.a.winprob, pb=m.b.winprob, bc=barColor();
-    const head=(t,trail)=>`<div class="dt ${trail?'trail':''}">${badge(t,42)}
+    // Live projected final (estimate): locked points for finished players + projection for the rest.
+    // Yahoo's API only gives the frozen start-of-week projection, so we estimate the "still to play" share.
+    const liveProj=(side,starters)=>{ const OP=side.proj||0, N=starters.length||1, share=OP/N; let p=0;
+      starters.forEach(pl=>{ const g=nflFor(pl.team), st=g&&g.state;
+        if(st==="post") p+=(pl.pts||0);            // game done → locked
+        else if(st==="in") p+=Math.max(pl.pts||0, share); // in progress → at least what they've scored
+        else p+=share; });                         // not started / unknown → projected share
+      return p; };
+    const lpA=liveProj(m.a,la.starters), lpB=liveProj(m.b,lb.starters);
+    const head=(t,trail,live)=>`<div class="dt ${trail?'trail':''}">${badge(t,42)}
       <span class="dnm">${esc(t.name)}</span><span class="dow">${esc(t.owner)}</span>
-      <span class="dsc">${t.score.toFixed(1)}</span><span class="dpj">proj ${t.proj.toFixed(0)}</span></div>`;
+      <span class="dsc">${t.score.toFixed(1)}</span><span class="dpj">proj ${Math.round(live)} · start ${t.proj.toFixed(0)}</span></div>`;
     const wp=(pa!=null&&pb!=null)?`<div class="wpwrap"><div class="wpbar"><i style="width:${pa}%;background:${bc}"></i><i style="width:${pb}%;background:var(--line-strong)"></i></div>
       <div class="wplab"><span>${pa}% win</span><span>win ${pb}%</span></div></div>`:"";
     const ytp=ps=>ps.filter(p=>{ const g=nflFor(p.team); return g&&g.state==="pre"; }).length;
@@ -1086,10 +1096,11 @@ window.__ydubReload=(function(){try{var n=performance.getEntriesByType&&performa
       const aw=av>bv?"w":"", bw=bv>av?"w":""; const A=hi?aw:(av<bv?"w":""), B=hi?bw:(bv<av?"w":"");
       return `<div class="cmp-row"><span class="cmp-v ${A}">${a}</span><span class="cmp-l">${lbl}</span><span class="cmp-v ${B}">${b}</span></div>`; };
     const cmp=`<div class="cmp">
-      ${cmpRow(m.a.proj.toFixed(1), m.b.proj.toFixed(1), "Proj Final", "hi")}
+      ${cmpRow(lpA.toFixed(1), lpB.toFixed(1), "Proj Final · live", "hi")}
+      ${cmpRow(m.a.proj.toFixed(1), m.b.proj.toFixed(1), "Proj · start", "hi")}
       ${cmpRow(ytp(la.starters), ytp(lb.starters), "Yet to Play", "hi")}
       ${cmpRow(benchPts(la).toFixed(1), benchPts(lb).toFixed(1), "Bench Pts", "hi")}
-    </div>`;
+    </div><p class="cmp-note">Live proj is our estimate — Yahoo doesn’t share its in-game projection.</p>`;
     const meta=p=> detMode==="stats" ? `<span class="pstat">${esc(statLine(p,statMap))}</span>` : pmeta(p);
     const cell=(p,right)=>`<div class="pcell tap ${right?'r':''}${gsCls(p)}" data-pk="${esc(p.key||'')}">${pav(p)}<div class="pinfo"><span class="pn">${esc(p.name||"—")}</span>${meta(p)}${p.name?rowGame(p):""}</div><span class="pts">${p.pts.toFixed(1)}</span></div>`;
     const rows=(A,B)=>{ let h=""; const n=Math.max(A.length,B.length);
@@ -1107,7 +1118,7 @@ window.__ydubReload=(function(){try{var n=performance.getEntriesByType&&performa
       : `<div class="lineup"><div class="secrow">Starters</div>${rows(la.starters,lb.starters)}<div class="totrow"><div class="tc">${sum(la.starters).toFixed(1)}</div><div class="tm">TOTAL</div><div class="tc r">${sum(lb.starters).toFixed(1)}</div></div><div class="secrow">Bench</div>${rows(la.bench,lb.bench)}</div>`;
     showDetail(
       `<button class="back" id="backBtn">‹ Back to Week ${leagues[li].week}</button>
-       <div class="dhead">${head(m.a,!aLead)}<div class="dmid"><span class="vs">${m.status==="postevent"?"FINAL":"VS"}</span></div>${head(m.b,aLead)}</div>
+       <div class="dhead">${head(m.a,!aLead,lpA)}<div class="dmid"><span class="vs">${m.status==="postevent"?"FINAL":"VS"}</span></div>${head(m.b,aLead,lpB)}</div>
        ${wp}${cmp}${toggle}
        <div class="gslegend"><span><i class="gsdot live"></i>Playing</span><span><i class="gsdot pre"></i>Yet to play</span><span><i class="gsdot done"></i>Done</span></div>
        ${detMode==="pts"?`<div class="legend">${legend}</div>`:""}
